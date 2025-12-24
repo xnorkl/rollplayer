@@ -1,0 +1,85 @@
+# Fly.io configuration template for GM Chatbot
+# Copy this file to fly.toml and customize for your deployment
+# See https://fly.io/docs/reference/configuration/ for full documentation
+
+# App name - change to your desired app name
+# Run: flyctl apps create <your-app-name>
+app = "roll20-chatbot"
+
+# Primary region - choose closest to your users
+# Available regions: https://fly.io/docs/reference/regions/
+primary_region = "iad"  # Examples: iad (US East), ord (US Central), lhr (London), nrt (Tokyo)
+
+[build]
+  # Path to Dockerfile relative to project root
+  dockerfile = "infrastructure/Dockerfile"
+
+[env]
+  # WebSocket server should bind to all interfaces in Fly.io
+  WS_ADDRESS = "0.0.0.0"
+  # Logging level: DEBUG, INFO, WARNING, ERROR
+  LOG_LEVEL = "INFO"
+  # PORT is automatically set by Fly.io, don't override
+
+[http_service]
+  # Internal port where the app listens
+  internal_port = 5678
+  # Force HTTPS for all connections
+  force_https = true
+  # Keep machines running (set to true for always-on)
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  # Health check endpoint
+  [[http_service.checks]]
+    grace_period = "10s"  # Time to wait before first check
+    interval = "30s"      # Check interval
+    method = "GET"
+    timeout = "5s"
+    path = "/health"      # Health check path (requires health endpoint)
+
+[processes]
+  app = "python3 chat_bot.py"
+
+# WebSocket service configuration
+[[services]]
+  internal_port = 5678
+  protocol = "tcp"
+  processes = ["app"]
+
+  # HTTPS/WSS endpoint
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+    force_https = true
+
+  # HTTP/WS endpoint (redirects to HTTPS)
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    force_https = true
+
+  # TCP health check for WebSocket
+  [[services.tcp_checks]]
+    grace_period = "10s"
+    interval = "30s"
+    timeout = "5s"
+
+# Resource limits
+[vm]
+  cpu_kind = "shared"  # Options: shared, performance
+  cpus = 1             # Number of CPUs
+  memory_mb = 256      # Memory in MB (minimum 256)
+
+# Optional: Scale configuration
+# [scale]
+#   min = 1
+#   max = 1
+
+# Optional: Mount volumes for persistent storage (if needed)
+# [[mounts]]
+#   source = "chatbot_data"
+#   destination = "/data"
+

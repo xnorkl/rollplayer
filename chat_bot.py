@@ -4,7 +4,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import random
 import sys
 from dataclasses import dataclass
 from enum import Enum
@@ -12,6 +11,9 @@ from typing import Optional, Callable
 
 import websockets as websockets
 from bs4 import BeautifulSoup
+
+from config import WS_ADDRESS, WS_PORT, LOG_LEVEL
+from gm_handler import GMHandler
 
 LOG = logging.getLogger(__name__)
 
@@ -44,22 +46,29 @@ class ChatEntry:
 
     @classmethod
     def from_html_str(cls, html: str) -> ChatEntry:
-        soup = BeautifulSoup(html, 'html.parser')
-        attrs = soup.find('div').attrs
-        return cls(id=attrs.get('data-messageid', ''), message=soup.get_text())
+        soup = BeautifulSoup(html, "html.parser")
+        attrs = soup.find("div").attrs
+        return cls(id=attrs.get("data-messageid", ""), message=soup.get_text())
 
 
 class ChatBot:
-    def __init__(self, msg_handler_func: Callable[[Package], Optional[str]],
-                 address: str = "127.0.0.1", port: int = 5678):
+    def __init__(
+        self,
+        msg_handler_func: Callable[[Package], Optional[str]],
+        address: str = "127.0.0.1",
+        port: int = 5678,
+    ):
         self._address = address
         self._port = port
         self._msg_handler_func = msg_handler_func
         self._handled_messages = set()
 
     def run_forever(self):
-        LOG.info(f"Starting at: '{self._address}:{self._port}'")
-        server = websockets.serve(ws_handler=self.handle, host=self._address, port=self._port)
+        LOG.info(f"Starting WebSocket server at: '{self._address}:{self._port}'")
+        LOG.info("Fly.io will use TCP health checks for WebSocket service")
+        server = websockets.serve(
+            ws_handler=self.handle, host=self._address, port=self._port
+        )
         asyncio.get_event_loop().run_until_complete(server)
         asyncio.get_event_loop().run_forever()
 
@@ -79,22 +88,38 @@ class ChatBot:
                     else:
                         LOG.debug("Sending no answer")
                 except Exception as e:
-                    LOG.warning(f"While handling the message the following exception occurred: {e}")
+                    LOG.warning(
+                        f"While handling the message the following exception occurred: {e}"
+                    )
             else:
                 LOG.debug(f"Already received the following message: '{msg}'")
 
 
-if __name__ == '__main__':
-    def example_message_handler(p: Package) -> Optional[str]:
-        """If the message is a '#' it returns a random number"""
+if __name__ == "__main__":
+    # Initialize GM handler
+    gm_handler = GMHandler()
+
+    def gm_message_handler(p: Package) -> Optional[str]:
+        """Handle messages using the GM handler"""
         if p.type == Package.Type.chat:
             chat_msg = p.to_chat_entry()
-            print(f"\texample_message_handler: {chat_msg}")
-            return str(random.randint(0, 10)) if chat_msg.message == "#" else None
+            LOG.debug(f"Received chat message: {chat_msg.message}")
+            response = gm_handler.handle_message(chat_msg.message)
+            if response:
+                LOG.debug(f"GM handler response: {response}")
+            return response
+        return None
 
+    # Configure logging
+    log_level = getattr(logging, LOG_LEVEL.upper(), logging.INFO)
+    logging.basicConfig(
+        stream=sys.stdout,
+        format="[%(asctime)s] [%(filename)s:%(lineno)d] %(levelname)s - %(message)s",
+        level=log_level,
+    )
+    LOG.setLevel(log_level)
 
-    logging.basicConfig(stream=sys.stdout, format='[%(asctime)s] [%(filename)s:%(lineno)d] %(levelname)s - %(message)s')
-    LOG.setLevel(logging.DEBUG)
-
-    bot = ChatBot(example_message_handler)
+    # Start the bot
+    LOG.info("Starting GM Chatbot for Shadowdark RPG...")
+    bot = ChatBot(gm_message_handler, address=WS_ADDRESS, port=WS_PORT)
     bot.run_forever()
