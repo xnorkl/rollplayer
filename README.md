@@ -69,9 +69,10 @@ For production hosting on Fly.io with GitOps:
 3. **Create app and deploy**:
 
    ```bash
-   cd infrastructure
    flyctl apps create roll20-chatbot
    flyctl secrets set OPENAI_API_KEY=your-api-key-here
+   # Copy fly.toml to project root (build context must be project root)
+   cp infrastructure/fly.toml fly.toml
    flyctl deploy
    ```
 

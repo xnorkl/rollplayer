@@ -16,6 +16,7 @@ infrastructure/
 ## Prerequisites
 
 1. **Fly.io CLI**: Install from https://fly.io/docs/getting-started/installing-flyctl/
+
    ```bash
    curl -L https://fly.io/install.sh | sh
    ```
@@ -35,21 +36,25 @@ flyctl auth login
 ### 2. Create Fly.io Application
 
 ```bash
-cd infrastructure
 flyctl apps create roll20-chatbot
 ```
 
-**Note**: If the app name `roll20-chatbot` is taken, choose a different name and update `fly.toml` accordingly.
+**Note**: If the app name `roll20-chatbot` is taken, choose a different name and update `infrastructure/fly.toml` accordingly.
+
+**Important**: For deployment, `fly.toml` must be in the project root (not in `infrastructure/`) because Fly.io uses the directory containing `fly.toml` as the build context. The source of truth is `infrastructure/fly.toml`, which should be copied to the project root before deployment.
 
 ### 3. Configure Application
 
 Copy the example configuration and customize:
 
 ```bash
+cd infrastructure
 cp fly.toml.example fly.toml
+cd ..
 ```
 
-Edit `fly.toml` and update:
+Edit `infrastructure/fly.toml` and update:
+
 - `app` - Your app name (if different)
 - `primary_region` - Choose closest to your users (see https://fly.io/docs/reference/regions/)
 
@@ -87,12 +92,21 @@ Deployments happen automatically via GitHub Actions when you push to `main` or `
 
 ### Manual Deployment
 
-Deploy manually from the infrastructure directory:
+Deploy manually from the project root:
 
 ```bash
-cd infrastructure
+# From project root directory
+# Copy infrastructure/fly.toml to root (build context must be project root)
+cp infrastructure/fly.toml fly.toml
 flyctl deploy
 ```
+
+**Note**:
+
+- `infrastructure/fly.toml` is the source of truth (version controlled)
+- `fly.toml` in project root is for deployment only (gitignored)
+- Fly.io uses the directory containing `fly.toml` as the build context
+- The Dockerfile references `infrastructure/Dockerfile` but builds from project root
 
 ### Verify Deployment
 
@@ -122,6 +136,7 @@ The application uses these environment variables (set via Fly.io secrets or `fly
 ### Resource Limits
 
 Default configuration in `fly.toml`:
+
 - CPU: 1 shared CPU
 - Memory: 256 MB
 
@@ -158,7 +173,10 @@ After deployment, update the Tampermonkey script (`chat_connector.js`) to use yo
    ```
 3. Or configure at runtime via browser console:
    ```javascript
-   localStorage.setItem('roll20_chatbot_ws_url', 'wss://roll20-chatbot.fly.dev');
+   localStorage.setItem(
+     "roll20_chatbot_ws_url",
+     "wss://roll20-chatbot.fly.dev"
+   );
    ```
 
 ## Monitoring & Logs
@@ -179,6 +197,7 @@ flyctl logs --app roll20-chatbot | grep ERROR
 ### Metrics
 
 View metrics in Fly.io dashboard:
+
 ```bash
 flyctl dashboard --app roll20-chatbot
 ```
@@ -188,11 +207,13 @@ flyctl dashboard --app roll20-chatbot
 ### Deployment Fails
 
 1. **Check build logs**:
+
    ```bash
    flyctl logs --app roll20-chatbot
    ```
 
 2. **Verify Dockerfile**:
+
    ```bash
    docker build -f infrastructure/Dockerfile -t test-image .
    ```
@@ -205,11 +226,13 @@ flyctl dashboard --app roll20-chatbot
 ### WebSocket Connection Issues
 
 1. **Verify app is running**:
+
    ```bash
    flyctl status --app roll20-chatbot
    ```
 
 2. **Check WebSocket URL**:
+
    - Use `wss://` (not `ws://`) for HTTPS pages
    - Verify app URL is correct
 
@@ -233,6 +256,7 @@ Fly.io uses TCP health checks for WebSocket services. If health checks fail:
 If experiencing memory issues:
 
 1. Increase memory allocation:
+
    ```bash
    flyctl scale vm shared-cpu-1x --memory 512 --app roll20-chatbot
    ```
@@ -254,6 +278,7 @@ flyctl releases rollback <release-id> --app roll20-chatbot
 ```
 
 Or rollback to previous release:
+
 ```bash
 flyctl releases rollback --app roll20-chatbot
 ```
@@ -283,8 +308,8 @@ flyctl releases rollback --app roll20-chatbot
 ## Support
 
 For issues:
+
 1. Check application logs: `flyctl logs --app roll20-chatbot`
 2. Review Fly.io status: https://status.fly.io
 3. Consult Fly.io documentation
 4. Check GitHub Issues for known problems
-

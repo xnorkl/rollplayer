@@ -27,7 +27,7 @@ fi
 # Test 2: Check if required Python packages are installed
 echo ""
 echo "Test 2: Checking Python dependencies..."
-python3 -c "import websockets; import bs4; print('✓ websockets and beautifulsoup4 installed')" 2>/dev/null || {
+python3 -c "import fastapi; import uvicorn; import bs4; print('✓ fastapi, uvicorn, and beautifulsoup4 installed')" 2>/dev/null || {
     echo -e "${RED}✗${NC} Missing required Python packages. Run: pip install -r requirements.txt"
     exit 1
 }

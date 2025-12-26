@@ -8,9 +8,9 @@ on:
   workflow_dispatch:
     inputs:
       skip_tests:
-        description: 'Skip smoke tests'
+        description: "Skip smoke tests"
         required: false
-        default: 'false'
+        default: "false"
         type: boolean
 
 jobs:
@@ -25,8 +25,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
+          python-version: "3.11"
+          cache: "pip"
 
       - name: Install dependencies
         run: |
@@ -45,7 +45,6 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
-          cd infrastructure
           flyctl deploy --remote-only
         continue-on-error: false
 
@@ -66,4 +65,3 @@ jobs:
         run: |
           echo "❌ Deployment failed!"
           exit 1
-

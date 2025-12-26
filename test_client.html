@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roll20 Chat Connector - Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .chat-container {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        #textchat {
+            background: #1e1e1e;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 10px;
+            min-height: 400px;
+            max-height: 600px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+        }
+        .message {
+            padding: 8px;
+            margin: 4px 0;
+            background: #2a2a2a;
+            border-left: 3px solid #4a9eff;
+            border-radius: 4px;
+        }
+        .byline {
+            color: #4a9eff;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        .message-content {
+            margin-top: 4px;
+            color: #e0e0e0;
+        }
+        .chat-input-container {
+            display: flex;
+            gap: 10px;
+        }
+        .ui-autocomplete-input {
+            flex: 1;
+            padding: 10px;
+            background: #1e1e1e;
+            border: 1px solid #444;
+            border-radius: 4px;
+            color: #e0e0e0;
+            font-size: 14px;
+        }
+        .btn {
+            padding: 10px 20px;
+            background: #4a9eff;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn:hover {
+            background: #3a8eef;
+        }
+        .status-panel {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .status-item {
+            padding: 10px;
+            margin: 8px 0;
+            background: #1e1e1e;
+            border-radius: 4px;
+        }
+        .status-label {
+            color: #888;
+            font-size: 0.9em;
+        }
+        .status-value {
+            color: #4a9eff;
+            font-weight: bold;
+            margin-top: 4px;
+        }
+        .log-panel {
+            background: #1e1e1e;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 10px;
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin: 4px 0;
+            padding: 4px;
+        }
+        .log-sent {
+            color: #4a9eff;
+        }
+        .log-received {
+            color: #4aff4a;
+        }
+        .log-error {
+            color: #ff4a4a;
+        }
+        .log-info {
+            color: #ffaa4a;
+        }
+        .config-panel {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .config-input {
+            width: 100%;
+            padding: 8px;
+            margin: 8px 0;
+            background: #1e1e1e;
+            border: 1px solid #444;
+            border-radius: 4px;
+            color: #e0e0e0;
+        }
+        h1, h2 {
+            color: #4a9eff;
+        }
+        .connection-status {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .connected {
+            background: #4aff4a;
+        }
+        .disconnected {
+            background: #ff4a4a;
+        }
+        .connecting {
+            background: #ffaa4a;
+        }
+    </style>
+</head>
+<body>
+    <h1>Roll20 Chat Connector - Test Page</h1>
+    
+    <div class="config-panel">
+        <h2>Configuration</h2>
+        <label>
+            WebSocket URL:
+            <input type="text" id="ws-url" class="config-input" 
+                   value="ws://localhost:5678" 
+                   placeholder="ws://localhost:5678">
+        </label>
+        <button class="btn" onclick="updateConfig()">Update Config</button>
+        <button class="btn" onclick="connect()">Connect</button>
+        <button class="btn" onclick="disconnect()">Disconnect</button>
+    </div>
+
+    <div class="container">
+        <div class="chat-container">
+            <h2>Chat (Simulated Roll20)</h2>
+            <div id="textchat"></div>
+            <div class="chat-input-container">
+                <textarea class="ui-autocomplete-input" id="chat-input" 
+                          placeholder="Type a message... (e.g., !roll 2d6)" 
+                          rows="2"></textarea>
+                <button class="btn" onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+
+        <div class="status-panel">
+            <h2>Status</h2>
+            <div class="status-item">
+                <div class="status-label">Connection Status</div>
+                <div class="status-value">
+                    <span class="connection-status disconnected" id="conn-status"></span>
+                    <span id="conn-text">Disconnected</span>
+                </div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">WebSocket URL</div>
+                <div class="status-value" id="ws-url-display">ws://localhost:5678</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Messages Sent</div>
+                <div class="status-value" id="msg-sent-count">0</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Messages Received</div>
+                <div class="status-value" id="msg-received-count">0</div>
+            </div>
+            
+            <h3 style="margin-top: 20px;">Console Log</h3>
+            <div class="log-panel" id="log-panel"></div>
+            <button class="btn" onclick="clearLog()" style="margin-top: 10px;">Clear Log</button>
+        </div>
+    </div>
+
+    <script>
+        // Simulate the chat_connector.js script
+        let webSocket;
+        let messageIdCounter = 0;
+        let messagesSent = 0;
+        let messagesReceived = 0;
+
+        // Initialize
+        function init() {
+            updateStatus();
+            addLog('info', 'Test page initialized. Click "Connect" to start.');
+        }
+
+        function updateConfig() {
+            const url = document.getElementById('ws-url').value;
+            localStorage.setItem('roll20_chatbot_ws_url', url);
+            document.getElementById('ws-url-display').textContent = url;
+            addLog('info', `WebSocket URL updated to: ${url}`);
+        }
+
+        function connect() {
+            const wsUrl = localStorage.getItem('roll20_chatbot_ws_url') || 
+                         document.getElementById('ws-url').value;
+            
+            if (webSocket && webSocket.readyState === WebSocket.OPEN) {
+                addLog('info', 'Already connected');
+                return;
+            }
+
+            addLog('info', `Connecting to: ${wsUrl}`);
+            updateConnectionStatus('connecting', 'Connecting...');
+            
+            webSocket = new WebSocket(wsUrl);
+            
+            webSocket.onopen = function(event) {
+                addLog('info', 'WebSocket connected');
+                updateConnectionStatus('connected', 'Connected');
+                alert("ChatBot connected");
+            };
+            
+            webSocket.onmessage = function(event) {
+                addLog('received', `Received: ${event.data}`);
+                messagesReceived++;
+                document.getElementById('msg-received-count').textContent = messagesReceived;
+                
+                // Simulate posting to Roll20 chat
+                const textArea = document.getElementById('chat-input');
+                textArea.value = event.data;
+                
+                // Auto-send after a short delay to show the response
+                setTimeout(() => {
+                    addChatMessage('ChatBot', event.data, true);
+                    textArea.value = '';
+                }, 500);
+            };
+            
+            webSocket.onclose = function(event) {
+                addLog('error', `Connection closed: code=${event.code}, reason=${event.reason || 'none'}`);
+                updateConnectionStatus('disconnected', 'Disconnected');
+                setTimeout(connect, 5000);
+            };
+            
+            webSocket.onerror = function(error) {
+                addLog('error', `WebSocket error: ${error}`);
+                updateConnectionStatus('disconnected', 'Error');
+            };
+        }
+
+        function disconnect() {
+            if (webSocket) {
+                webSocket.close();
+                webSocket = null;
+                updateConnectionStatus('disconnected', 'Disconnected');
+                addLog('info', 'Disconnected');
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            if (!webSocket || webSocket.readyState !== WebSocket.OPEN) {
+                addLog('error', 'Not connected to WebSocket');
+                alert('Not connected! Click "Connect" first.');
+                return;
+            }
+
+            // Add message to chat display
+            addChatMessage('You', message);
+            
+            // Create message node similar to Roll20 structure
+            const messageId = `msg-${++messageIdCounter}`;
+            const messageHtml = `
+                <div class="message" data-messageid="${messageId}">
+                    <span class="byline">You</span>
+                    <div class="message-content">${message}</div>
+                </div>
+            `;
+            
+            // Extract message info (simulating extractMessageInfo function)
+            const messageInfo = {
+                sender: 'You',
+                message: message,
+                html: messageHtml
+            };
+            
+            // Send to server
+            const payload = JSON.stringify({
+                type: "chat",
+                data: messageHtml,
+                sender: messageInfo.sender,
+                message: messageInfo.message
+            });
+            
+            webSocket.send(payload);
+            addLog('sent', `Sent: ${payload}`);
+            messagesSent++;
+            document.getElementById('msg-sent-count').textContent = messagesSent;
+            
+            input.value = '';
+        }
+
+        function addChatMessage(sender, message, isResponse = false) {
+            const chat = document.getElementById('textchat');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+            messageDiv.innerHTML = `
+                <span class="byline">${sender}</span>
+                <div class="message-content">${message}</div>
+            `;
+            chat.appendChild(messageDiv);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function updateConnectionStatus(status, text) {
+            const statusEl = document.getElementById('conn-status');
+            const textEl = document.getElementById('conn-text');
+            
+            statusEl.className = 'connection-status ' + status;
+            textEl.textContent = text;
+        }
+
+        function addLog(type, message) {
+            const logPanel = document.getElementById('log-panel');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            logPanel.appendChild(entry);
+            logPanel.scrollTop = logPanel.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log-panel').innerHTML = '';
+        }
+
+        function updateStatus() {
+            const storedUrl = localStorage.getItem('roll20_chatbot_ws_url');
+            if (storedUrl) {
+                document.getElementById('ws-url').value = storedUrl;
+                document.getElementById('ws-url-display').textContent = storedUrl;
+            }
+        }
+
+        // Allow Enter key to send message
+        document.getElementById('chat-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>
+

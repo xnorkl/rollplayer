@@ -4,12 +4,17 @@ This document describes the smoke tests and testing procedures for the GM Chatbo
 
 ## Test Files
 
+### Server-Side Tests
 - `test_game_engine.py` - Unit tests for game engine components
 - `test_command_parser.py` - Unit tests for command parsing
 - `test_gm_handler.py` - Unit tests for GM handler
 - `smoke_test.py` - Comprehensive smoke test runner
 - `test_websocket.sh` - Bash script for basic connectivity tests
 - `health_check.py` - HTTP health check server for curl testing
+
+### Client-Side Tests
+- `test_client.html` - Standalone HTML page to test the client-side code
+- `CLIENT_TESTING.md` - Comprehensive guide for testing the client-side userscript
 
 ## Running Tests
 
@@ -123,6 +128,15 @@ python3 smoke_test.py
 # Check exit code (0 = success, 1 = failure)
 echo $?
 ```
+
+## Client-Side Testing
+
+For testing the client-side Tampermonkey userscript (`chat_connector.js`), see **[CLIENT_TESTING.md](CLIENT_TESTING.md)** for detailed instructions.
+
+Quick start:
+1. Use the standalone test page: `test_client.html`
+2. Or test directly in Roll20 with Tampermonkey installed
+3. Check browser console for connection logs and errors
 
 ## Manual Testing
 
