@@ -7,7 +7,7 @@ import sys
 import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, Callable
+from typing import Optional, Callable, Dict, Any
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.responses import JSONResponse
@@ -32,12 +32,15 @@ class Package:
         chat = "chat"
 
     type: Type
-    data: str
+    data: str | dict  # Can be string (old format) or dict (new Roll20 API format)
 
     @classmethod
     def from_json(cls, json_data: str) -> Package:
         dct = json.loads(json_data)
-        return cls(type=Package.Type(dct["type"]), data=dct.get("data", ""))
+        data = dct.get("data", "")
+        # If data is a dict (new Roll20 API format), keep it as dict
+        # If data is a string (old format), keep it as string
+        return cls(type=Package.Type(dct["type"]), data=data)
 
     def to_chat_entry(self) -> ChatEntry:
         return ChatEntry.from_package(self)
@@ -47,13 +50,37 @@ class Package:
 class ChatEntry:
     id: str
     message: str
+    who: Optional[str] = None
+    playerid: Optional[str] = None
+    characterId: Optional[str] = None
+    message_type: Optional[str] = None  # "command", "question", "rollresult"
+    roll_data: Optional[dict] = None  # For rollresult messages
 
     @classmethod
     def from_package(cls, package: Package) -> ChatEntry:
-        return cls.from_html_str(package.data)
+        # Check if data is a dict (new Roll20 API format)
+        if isinstance(package.data, dict):
+            return cls.from_roll20_api(package.data)
+        else:
+            # Old format: HTML string
+            return cls.from_html_str(package.data)
+
+    @classmethod
+    def from_roll20_api(cls, data: dict) -> ChatEntry:
+        """Create ChatEntry from Roll20 API message format."""
+        return cls(
+            id=data.get("messageId", ""),
+            message=data.get("message", ""),
+            who=data.get("who"),
+            playerid=data.get("playerid"),
+            characterId=data.get("characterId"),
+            message_type=data.get("type"),
+            roll_data=data.get("rollData"),
+        )
 
     @classmethod
     def from_html_str(cls, html: str) -> ChatEntry:
+        """Create ChatEntry from old HTML format (backward compatibility)."""
         soup = BeautifulSoup(html, "html.parser")
         div = soup.find("div")
         if not div:
@@ -78,10 +105,25 @@ class ChatEntry:
         return cls(id=message_id, message=message)
 
 
+@dataclass
+class BotResponse:
+    """Structured response from the bot."""
+
+    type: str  # "text", "rollresult", "command"
+    content: str  # Plain text or JSON string
+    metadata: Optional[Dict[str, Any]] = None
+
+    def to_json(self) -> str:
+        """Convert to JSON string for WebSocket transmission."""
+        return json.dumps(
+            {"type": self.type, "content": self.content, **(self.metadata or {})}
+        )
+
+
 class ChatBot:
     def __init__(
         self,
-        msg_handler_func: Callable[[Package], Optional[str]],
+        msg_handler_func: Callable[[Package], Optional[str | BotResponse]],
     ):
         self._msg_handler_func = msg_handler_func
         self._handled_messages = set()
@@ -225,12 +267,20 @@ class ChatBot:
                             if answer := self._msg_handler_func(p):
                                 # #region agent log
                                 try:
+                                    answer_length = (
+                                        len(answer)
+                                        if isinstance(answer, str)
+                                        else len(str(answer))
+                                    )
                                     log_data = {
                                         "sessionId": "debug-session",
                                         "runId": "run3",
                                         "location": "chat_bot.py:102",
                                         "message": "Handler returned answer",
-                                        "data": {"answerLength": len(answer)},
+                                        "data": {
+                                            "answerLength": answer_length,
+                                            "answerType": type(answer).__name__,
+                                        },
                                         "timestamp": int(time.time() * 1000),
                                         "hypothesisId": "G",
                                     }
@@ -239,7 +289,13 @@ class ChatBot:
                                     pass
                                 # #endregion
                                 LOG.debug(f"Sending the following answer: {answer}")
-                                await websocket.send_text(answer)
+
+                                # Handle both string (old format) and BotResponse (new format)
+                                if isinstance(answer, BotResponse):
+                                    await websocket.send_text(answer.to_json())
+                                else:
+                                    # Backward compatibility: plain text
+                                    await websocket.send_text(answer)
                             else:
                                 # #region agent log
                                 try:
@@ -465,7 +521,8 @@ if __name__ == "__main__":
                 except:
                     pass
             # #endregion
-            response = gm_handler.handle_message(chat_msg.message)
+            # Pass full ChatEntry for context (characterId, playerid, etc.)
+            response = gm_handler.handle_message(chat_msg)
             # #region agent log
             try:
                 log_data = {

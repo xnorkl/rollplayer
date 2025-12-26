@@ -313,6 +313,36 @@ class SpellManager:
         return "\n".join(lines)
 
 
+    @staticmethod
+    def parse_roll20_roll_data(roll_data: dict) -> Tuple[list, int]:
+        """
+        Parse Roll20 roll data to extract dice values and modifier.
+        
+        Args:
+            roll_data: Roll20 rollresult data structure
+            
+        Returns:
+            Tuple of (dice_values_list, modifier)
+        """
+        dice = roll_data.get("dice", [])
+        modifier = roll_data.get("modifier", 0)
+        return dice, modifier
+    
+    @staticmethod
+    def calculate_total_from_roll20(dice: list, modifier: int) -> int:
+        """
+        Calculate total from Roll20 dice values and modifier.
+        
+        Args:
+            dice: List of dice values
+            modifier: Modifier to add
+            
+        Returns:
+            Total value
+        """
+        return sum(dice) + modifier
+
+
 class ShadowdarkRules:
     """Shadowdark RPG rule calculations and checks."""
 
