@@ -96,7 +96,16 @@ The application is containerized and can be deployed to Fly.io:
 flyctl deploy
 ```
 
-See `infrastructure/fly.toml` for configuration.
+See `infrastructure/README.md` for detailed deployment instructions.
+
+## Documentation
+
+Comprehensive documentation is available in the [`docs/`](docs/) directory:
+
+- **[Usage Guide](docs/usage.md)** - Complete API usage with examples
+- **[Testing Guide](docs/testing.md)** - Testing procedures and CI/CD
+- **[Requirements Document](docs/requirements.md)** - Architecture specification and requirements
+- **[Documentation Index](docs/README.md)** - Overview of all documentation
 
 ## License
 

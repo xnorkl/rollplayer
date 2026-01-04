@@ -1,6 +1,7 @@
 """Artifact store for YAML persistence."""
 
 import fcntl
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -10,13 +11,15 @@ from ..models.base import BaseArtifact
 class ArtifactStore:
     """Manages YAML artifact persistence with atomic writes and file locking."""
 
-    def __init__(self, campaigns_dir: Path | str = "campaigns"):
+    def __init__(self, campaigns_dir: Path | str | None = None):
         """
         Initialize artifact store.
 
         Args:
-            campaigns_dir: Base directory for campaign artifacts
+            campaigns_dir: Base directory for campaign artifacts (defaults to CAMPAIGNS_DIR env var or /data/campaigns)
         """
+        if campaigns_dir is None:
+            campaigns_dir = os.getenv("CAMPAIGNS_DIR", "/data/campaigns")
         self.campaigns_dir = Path(campaigns_dir)
         self.campaigns_dir.mkdir(parents=True, exist_ok=True)
 

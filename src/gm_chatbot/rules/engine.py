@@ -1,5 +1,6 @@
 """Rules engine for querying game rules."""
 
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -10,13 +11,15 @@ from ..models.rules import AbilityDefinition, RuleSet
 class RulesEngine:
     """Engine for loading and querying game rules."""
 
-    def __init__(self, rules_dir: Path | str = "rules"):
+    def __init__(self, rules_dir: Path | str | None = None):
         """
         Initialize rules engine.
 
         Args:
-            rules_dir: Directory containing rule YAML files
+            rules_dir: Directory containing rule YAML files (defaults to RULES_DIR env var or /data/rules)
         """
+        if rules_dir is None:
+            rules_dir = os.getenv("RULES_DIR", "/data/rules")
         self.loader = RuleLoader(rules_dir)
         self._current_ruleset: Optional[RuleSet] = None
 

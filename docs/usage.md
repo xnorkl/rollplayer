@@ -1,6 +1,8 @@
-# GM Chatbot Usage Guide
+# API Usage Guide
 
-## API Usage
+Complete guide to using the GM Chatbot API, including REST endpoints, WebSocket connections, CLI usage, and YAML artifacts.
+
+## REST API
 
 ### Creating a Campaign
 
@@ -35,7 +37,12 @@ curl -X POST "http://localhost:8000/api/v1/campaigns/{campaign_id}/characters" \
 ### Rolling Dice
 
 ```bash
-curl -X POST "http://localhost:8000/api/v1/tools/dice/roll?expression=2d6+3"
+curl -X POST "http://localhost:8000/api/v1/tools/dice/roll" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "expression": "2d6+3",
+    "reason": "Damage roll"
+  }'
 ```
 
 ### Sending Chat Messages
@@ -47,6 +54,12 @@ curl -X POST "http://localhost:8000/api/v1/campaigns/{campaign_id}/chat" \
     "message": "What should the party do next?",
     "campaign_id": "{campaign_id}"
   }'
+```
+
+### Querying Game Rules
+
+```bash
+curl "http://localhost:8000/api/v1/rules/shadowdark"
 ```
 
 ## WebSocket Chat
@@ -64,7 +77,9 @@ ws.onmessage = (event) => {
 ws.send('Hello GM!');
 ```
 
-## CLI Usage
+## CLI Client
+
+The CLI client provides a convenient interface for common operations:
 
 ### List Campaigns
 
@@ -78,26 +93,39 @@ uv run python scripts/cli.py campaigns
 uv run python scripts/cli.py roll "1d20+5" "Attack roll"
 ```
 
-### Chat
+### Chat with GM
 
 ```bash
 uv run python scripts/cli.py chat {campaign_id} "What happens next?"
 ```
 
+For more CLI commands, see the root [README.md](../README.md) or run:
+
+```bash
+uv run python scripts/cli.py --help
+```
+
 ## YAML Artifacts
 
-Campaigns and characters are stored as YAML files in the `campaigns/` directory:
+Campaigns and characters are stored as validated YAML files in the `campaigns/` directory:
 
 ```
 campaigns/
   {campaign_id}/
-    campaign.yaml
+    campaign.yaml           # Campaign metadata
+    gm_rules.yaml          # GM-specific rules
+    player_rules.yaml      # Player-facing rules
     characters/
-      pc_theron.yaml
-      npc_goblin.yaml
+      pc_theron.yaml       # Player character
+      npc_goblin.yaml      # Non-player character
+    modules/
+      session_001.yaml      # Session modules
     state/
-      history.yaml
+      combat_state.yaml     # Current combat state
+      history.yaml          # Action history
 ```
+
+All artifacts are validated against Pydantic models before being used by the system.
 
 ## Game Rules
 
@@ -106,11 +134,12 @@ Game rules are stored in YAML format in the `rules/` directory:
 ```
 rules/
   shadowdark/
-    core.yaml
+    core.yaml              # Core rule definitions
 ```
 
-Rules can be queried via the API:
+Rules can be:
+- Loaded dynamically without code changes
+- Queried via the API
+- Extended with campaign-specific house rules
 
-```bash
-curl "http://localhost:8000/api/v1/rules/shadowdark"
-```
+See [requirements.md](requirements.md) for detailed information about the rules engine and artifact structure.

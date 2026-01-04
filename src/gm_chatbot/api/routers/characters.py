@@ -2,7 +2,8 @@
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Body, Depends, status
+from fastapi.responses import Response
 
 from ...api.dependencies import get_character_service
 from ...api.exceptions import APIError, ErrorCodes
@@ -142,4 +143,60 @@ async def delete_character(
             ErrorCodes.INTERNAL_ERROR,
             f"Failed to delete character: {str(e)}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        ) from e
+
+
+@router.get(
+    "/campaigns/{campaign_id}/characters/{character_id}/export",
+    response_class=Response,
+)
+async def export_character(
+    campaign_id: str,
+    character_id: str,
+    service: CharacterService = Depends(get_character_service),
+):
+    """Export character sheet as YAML."""
+    try:
+        character = await service.get_character(campaign_id, character_id)
+        yaml_content = character.to_yaml()
+        filename = f"{character.identity.name.replace(' ', '_')}.yaml"
+        return Response(
+            content=yaml_content,
+            media_type="application/x-yaml",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except FileNotFoundError:
+        raise APIError(
+            ErrorCodes.CHARACTER_NOT_FOUND,
+            f"Character {character_id} not found",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+    except Exception as e:
+        raise APIError(
+            ErrorCodes.INTERNAL_ERROR,
+            f"Failed to export character: {str(e)}",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        ) from e
+
+
+@router.post(
+    "/campaigns/{campaign_id}/characters/import",
+    response_model=APIResponse[CharacterSheet],
+    status_code=status.HTTP_201_CREATED,
+)
+async def import_character(
+    campaign_id: str,
+    yaml_content: str = Body(..., media_type="application/x-yaml"),
+    service: CharacterService = Depends(get_character_service),
+):
+    """Import character sheet from YAML."""
+    try:
+        character = CharacterSheet.from_yaml(yaml_content)
+        imported = await service.import_character(campaign_id, character)
+        return APIResponse(success=True, data=imported)
+    except Exception as e:
+        raise APIError(
+            ErrorCodes.VALIDATION_ERROR,
+            f"Failed to import character: {str(e)}",
+            status_code=status.HTTP_400_BAD_REQUEST,
         ) from e

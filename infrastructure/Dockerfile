@@ -20,8 +20,9 @@ COPY --from=builder /app/.venv /app/.venv
 
 # Copy application code
 COPY src/ ./src/
-COPY rules/ ./rules/
-COPY campaigns/ ./campaigns/
+
+# Create volume mount points for persistent storage
+RUN mkdir -p /data/campaigns /data/rules
 
 # Set environment variables
 ENV PATH="/app/.venv/bin:$PATH"

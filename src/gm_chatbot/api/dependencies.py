@@ -1,5 +1,7 @@
 """Dependency injection for FastAPI."""
 
+import os
+
 from ..artifacts.store import ArtifactStore
 from ..services.campaign_service import CampaignService
 from ..services.character_service import CharacterService
@@ -19,7 +21,8 @@ def get_artifact_store() -> ArtifactStore:
     """Get artifact store instance."""
     global _store
     if _store is None:
-        _store = ArtifactStore()
+        campaigns_dir = os.getenv("CAMPAIGNS_DIR", "/data/campaigns")
+        _store = ArtifactStore(campaigns_dir=campaigns_dir)
     return _store
 
 

@@ -58,7 +58,21 @@ Edit `infrastructure/fly.toml` and update:
 - `app` - Your app name (if different)
 - `primary_region` - Choose closest to your users (see https://fly.io/docs/reference/regions/)
 
-### 4. Set Secrets
+### 4. Create Persistent Volume
+
+Create a persistent volume for campaign data and rules:
+
+```bash
+# Create volume (10GB is a good starting size)
+flyctl volumes create chatbot_data --size 10 --app roll20-chatbot
+
+# Verify volume was created
+flyctl volumes list --app roll20-chatbot
+```
+
+**Note**: The volume will be mounted at `/data` and will contain both `/data/campaigns` and `/data/rules` directories.
+
+### 5. Set Secrets
 
 Set sensitive configuration as Fly.io secrets:
 
@@ -71,11 +85,15 @@ flyctl secrets set LLM_MODEL=gpt-4o-mini
 
 # Optional: Set log level
 flyctl secrets set LOG_LEVEL=INFO
+
+# Optional: Override storage paths (defaults shown)
+flyctl secrets set CAMPAIGNS_DIR=/data/campaigns
+flyctl secrets set RULES_DIR=/data/rules
 ```
 
 **Important**: Never commit secrets to git. Always use `flyctl secrets set`.
 
-### 5. Configure GitHub Actions
+### 6. Configure GitHub Actions
 
 1. Go to your GitHub repository
 2. Navigate to Settings → Secrets and variables → Actions
@@ -127,11 +145,18 @@ flyctl info --app roll20-chatbot
 
 The application uses these environment variables (set via Fly.io secrets or `fly.toml`):
 
+**Application Configuration:**
 - `OPENAI_API_KEY` - OpenAI API key (required for AI features)
 - `LLM_MODEL` - LLM model name (default: `gpt-4o-mini`)
 - `WS_ADDRESS` - WebSocket bind address (default: `0.0.0.0` for Fly.io)
 - `PORT` - Port number (automatically set by Fly.io)
 - `LOG_LEVEL` - Logging level (default: `INFO`)
+
+**Storage Configuration:**
+- `CAMPAIGNS_DIR` - Directory for campaign artifacts (default: `/data/campaigns`)
+- `RULES_DIR` - Directory for game rules YAML files (default: `/data/rules`)
+
+**Note**: Storage directories default to `/data/campaigns` and `/data/rules` which are mounted from the persistent volume. These can be overridden for testing or custom deployments.
 
 ### Resource Limits
 
@@ -262,6 +287,78 @@ If experiencing memory issues:
    ```
 
 2. Check for memory leaks in application logs
+
+## Persistent Storage
+
+### Volume Management
+
+The application uses a persistent volume mounted at `/data` to store:
+- Campaign artifacts (`/data/campaigns/`)
+- Game rules (`/data/rules/`)
+
+**Volume Operations:**
+
+```bash
+# List volumes
+flyctl volumes list --app roll20-chatbot
+
+# Create additional volume (if needed)
+flyctl volumes create chatbot_data_2 --size 10 --app roll20-chatbot
+
+# Extend volume size
+flyctl volumes extend chatbot_data --size 20 --app roll20-chatbot
+
+# Delete volume (WARNING: This will delete all data!)
+flyctl volumes destroy chatbot_data --app roll20-chatbot
+```
+
+### Rules Management
+
+Game rules are stored in `/data/rules/` and can be updated without redeploying:
+
+1. **Initial Setup**: Copy default rules to volume on first deployment
+2. **Update Rules**: SSH into the machine and edit YAML files directly, or use volume snapshots
+3. **Hot Reload**: Rules are cached in memory - restart the app to reload
+
+```bash
+# SSH into machine
+flyctl ssh console --app roll20-chatbot
+
+# Edit rules (example)
+cd /data/rules/shadowdark
+vi core.yaml
+
+# Restart app to reload rules
+flyctl apps restart roll20-chatbot
+```
+
+### Character Sheet Import/Export
+
+Players can export and import their character sheets via the API:
+
+**Export Character:**
+```bash
+# Get character sheet as YAML
+curl -X GET \
+  "https://your-app.fly.dev/api/v1/campaigns/{campaign_id}/characters/{character_id}/export" \
+  -H "Accept: application/x-yaml" \
+  -o character.yaml
+```
+
+**Import Character:**
+```bash
+# Import character sheet from YAML
+curl -X POST \
+  "https://your-app.fly.dev/api/v1/campaigns/{campaign_id}/characters/import" \
+  -H "Content-Type: application/x-yaml" \
+  --data-binary @character.yaml
+```
+
+**Use Cases:**
+- Backup character sheets
+- Share characters between campaigns
+- Import characters from external tools
+- Restore lost character data
 
 ## Rollback
 

@@ -1,5 +1,7 @@
 """Rules router."""
 
+import os
+
 from fastapi import APIRouter, Depends, status
 
 from ...api.exceptions import APIError, ErrorCodes
@@ -17,7 +19,8 @@ def get_rules_engine() -> RulesEngine:
     """Get rules engine instance."""
     global _rules_engine
     if _rules_engine is None:
-        _rules_engine = RulesEngine()
+        rules_dir = os.getenv("RULES_DIR", "/data/rules")
+        _rules_engine = RulesEngine(rules_dir=rules_dir)
     return _rules_engine
 
 
