@@ -1,4 +1,4 @@
-app = "gm-chatbot"
+app = "roll20-chatbot"
 primary_region = "iad"
 
 [build]
