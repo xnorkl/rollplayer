@@ -1,31 +1,34 @@
-# Dockerfile for GM Chatbot on Fly.io
-FROM python:3.11-slim
+# Use UV base image for faster builds
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
 
-# Set working directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    && rm -rf /var/lib/apt/lists/*
+# Copy dependency files
+COPY pyproject.toml ./
+COPY uv.lock* ./
 
-# Copy requirements first for better caching
-# Build context is project root, so files are at root level
-COPY requirements.txt .
+# Install dependencies
+RUN uv sync --frozen --no-dev
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Runtime stage
+FROM python:3.12-slim
 
-# Copy application code (from project root)
-COPY *.py ./
-COPY shadowdark_rules.py ./
+WORKDIR /app
 
-# Expose WebSocket port
-EXPOSE 5678
+# Copy virtual environment from builder
+COPY --from=builder /app/.venv /app/.venv
 
-# Health check (optional, Fly.io will use its own)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python3 -c "import socket; s=socket.socket(); s.connect(('localhost', 5678)); s.close()" || exit 1
+# Copy application code
+COPY src/ ./src/
+COPY rules/ ./rules/
+COPY campaigns/ ./campaigns/
 
-# Run the application
-CMD ["python3", "chat_bot.py"]
+# Set environment variables
+ENV PATH="/app/.venv/bin:$PATH"
+ENV PYTHONPATH="/app/src:$PYTHONPATH"
 
+# Expose port
+EXPOSE 8000
+
+# Run application
+CMD ["python", "-m", "gm_chatbot.main"]

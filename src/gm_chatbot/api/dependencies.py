@@ -1,0 +1,58 @@
+"""Dependency injection for FastAPI."""
+
+from ..artifacts.store import ArtifactStore
+from ..services.campaign_service import CampaignService
+from ..services.character_service import CharacterService
+from ..services.game_state_service import GameStateService
+from ..tools.registry import DiceToolRegistry
+
+
+# Global instances (singleton pattern)
+_store: ArtifactStore | None = None
+_campaign_service: CampaignService | None = None
+_character_service: CharacterService | None = None
+_game_state_service: GameStateService | None = None
+_dice_tool_registry: DiceToolRegistry | None = None
+
+
+def get_artifact_store() -> ArtifactStore:
+    """Get artifact store instance."""
+    global _store
+    if _store is None:
+        _store = ArtifactStore()
+    return _store
+
+
+def get_campaign_service() -> CampaignService:
+    """Get campaign service instance."""
+    global _campaign_service
+    if _campaign_service is None:
+        _campaign_service = CampaignService(get_artifact_store())
+    return _campaign_service
+
+
+def get_character_service() -> CharacterService:
+    """Get character service instance."""
+    global _character_service
+    if _character_service is None:
+        _character_service = CharacterService(get_artifact_store())
+    return _character_service
+
+
+def get_game_state_service() -> GameStateService:
+    """Get game state service instance."""
+    global _game_state_service
+    if _game_state_service is None:
+        _game_state_service = GameStateService(
+            get_artifact_store(),
+            get_character_service(),
+        )
+    return _game_state_service
+
+
+def get_dice_tool_registry() -> DiceToolRegistry:
+    """Get dice tool registry instance."""
+    global _dice_tool_registry
+    if _dice_tool_registry is None:
+        _dice_tool_registry = DiceToolRegistry()
+    return _dice_tool_registry
