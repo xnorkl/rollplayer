@@ -56,8 +56,8 @@ get_toml_value() {
         }
         in_section && $0 ~ "^[[:space:]]*" key "[[:space:]]*=" {
             gsub(/^[[:space:]]*[^=]+=[[:space:]]*["'\'']?/, "")
-            gsub(/["'\'']?[[:space:]]*$/, "")
-            gsub(/[[:space:]]*#.*$/, "")  # Remove inline comments
+            gsub(/[[:space:]]*#.*$/, "")  # Remove inline comments FIRST
+            gsub(/["'\'']?[[:space:]]*$/, "")  # Remove trailing quotes AFTER comments
             gsub(/^[[:space:]]+|[[:space:]]+$/, "")  # Trim whitespace
             print
             exit
@@ -107,6 +107,10 @@ ensure_volume() {
     fi
 
     log_info "Volume '$name' does not exist, creating..."
+
+    # #region agent log
+    echo "{\"timestamp\":$(date +%s000),\"location\":\"manage-volumes.sh:111\",\"message\":\"About to create volume\",\"data\":{\"name\":\"$name\",\"size_gb\":\"$size_gb\",\"region\":\"$region\",\"app\":\"$app\",\"region_length\":${#region},\"region_hex\":\"$(echo -n "$region" | xxd -p | tr -d '\n')\"},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}" >> /Users/thomasgordon/Engagements/Etc/roll20_chatbot/.cursor/debug.log 2>/dev/null || true
+    # #endregion agent log
 
     if [[ "$DRY_RUN" == "true" ]]; then
         log_warn "DRY RUN: Would create volume '$name' (${size_gb}GB) in region '$region' for app '$app'"
@@ -160,6 +164,10 @@ ensure_all_volumes() {
         region=$(get_toml_value "$volume_id" "region" "$VOLUMES_CONFIG")
         app=$(get_toml_value "$volume_id" "app" "$VOLUMES_CONFIG")
         required=$(get_toml_value "$volume_id" "required" "$VOLUMES_CONFIG")
+
+        # #region agent log
+        echo "{\"timestamp\":$(date +%s000),\"location\":\"manage-volumes.sh:162\",\"message\":\"Extracted TOML values\",\"data\":{\"volume_id\":\"$volume_id\",\"name\":\"$name\",\"size_gb\":\"$size_gb\",\"region\":\"$region\",\"app\":\"$app\",\"required\":\"$required\"},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}" >> /Users/thomasgordon/Engagements/Etc/roll20_chatbot/.cursor/debug.log 2>/dev/null || true
+        # #endregion agent log
 
         # Validate required fields
         if [[ -z "$name" ]] || [[ -z "$size_gb" ]] || [[ -z "$region" ]] || [[ -z "$app" ]]; then
