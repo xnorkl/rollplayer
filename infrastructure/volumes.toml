@@ -6,6 +6,6 @@
 name = "chatbot_data"
 size_gb = 10
 region = "iad"  # Must match primary_region in fly.toml
-app = "gm-chatbot"
+app = "roll20-chatbot"
 description = "Persistent storage for campaigns, characters, and rules"
 required = true  # If true, deployment fails if volume doesn't exist
