@@ -10,6 +10,8 @@ infrastructure/
 ├── .dockerignore       # Docker build exclusions
 ├── fly.toml            # Fly.io application configuration
 ├── fly.toml.example    # Example configuration template
+├── volumes.toml        # Volume configuration (Infrastructure as Code)
+├── manage-volumes.sh   # Volume management script
 └── README.md           # This file
 ```
 
@@ -288,29 +290,99 @@ If experiencing memory issues:
 
 2. Check for memory leaks in application logs
 
-## Persistent Storage
+## Volume Management
 
-### Volume Management
+Volumes are managed as Infrastructure as Code using `infrastructure/volumes.toml` and the `manage-volumes.sh` script. This ensures volumes are automatically provisioned during deployment.
+
+### Volume Configuration
+
+Volume specifications are defined in `infrastructure/volumes.toml`:
+
+```toml
+[volumes.chatbot_data]
+name = "chatbot_data"
+size_gb = 10
+region = "iad"  # Must match primary_region in fly.toml
+app = "gm-chatbot"
+description = "Persistent storage for campaigns, characters, and rules"
+required = true  # If true, deployment fails if volume doesn't exist
+```
+
+**Configuration Fields:**
+- `name` - Volume name (required)
+- `size_gb` - Volume size in GB (required)
+- `region` - Fly.io region code, must match `primary_region` in `fly.toml` (required)
+- `app` - Application name, must match `app` in `fly.toml` (required)
+- `description` - Human-readable description (optional)
+- `required` - If `true`, deployment fails if volume creation fails (default: `true`)
+
+### Volume Management Script
+
+The `infrastructure/manage-volumes.sh` script provides idempotent volume operations:
+
+**Ensure Volumes (Idempotent):**
+```bash
+# Ensure all volumes from volumes.toml exist (creates if missing)
+./infrastructure/manage-volumes.sh ensure
+```
+
+**List Volumes:**
+```bash
+# List all volumes for app (auto-detects app from fly.toml)
+./infrastructure/manage-volumes.sh list
+
+# List volumes for specific app
+./infrastructure/manage-volumes.sh list gm-chatbot
+```
+
+**Extend Volume:**
+```bash
+# Extend volume to new size
+./infrastructure/manage-volumes.sh extend chatbot_data 20
+```
+
+**Dry Run:**
+```bash
+# Test volume operations without making changes
+DRY_RUN=true ./infrastructure/manage-volumes.sh ensure
+```
+
+### Automated Volume Provisioning
+
+Volumes are automatically provisioned during CI/CD deployment:
+
+1. **GitHub Actions** runs `manage-volumes.sh ensure` before deployment
+2. Script checks if volumes exist (idempotent)
+3. Creates volumes if they don't exist
+4. Deployment proceeds only if volume provisioning succeeds
+
+**No manual intervention required** - volumes are created automatically on first deployment.
+
+### Manual Volume Operations
+
+For advanced operations, you can use `flyctl` directly:
+
+```bash
+# List volumes
+flyctl volumes list --app gm-chatbot
+
+# Create additional volume (if needed)
+flyctl volumes create chatbot_data_2 --size 10 --app gm-chatbot
+
+# Extend volume size
+flyctl volumes extend chatbot_data --size 20 --app gm-chatbot
+
+# Delete volume (WARNING: This will delete all data!)
+flyctl volumes destroy chatbot_data --app gm-chatbot
+```
+
+**Note:** For standard operations, use `manage-volumes.sh` which is idempotent and configuration-driven.
+
+### Volume Storage Structure
 
 The application uses a persistent volume mounted at `/data` to store:
 - Campaign artifacts (`/data/campaigns/`)
 - Game rules (`/data/rules/`)
-
-**Volume Operations:**
-
-```bash
-# List volumes
-flyctl volumes list --app roll20-chatbot
-
-# Create additional volume (if needed)
-flyctl volumes create chatbot_data_2 --size 10 --app roll20-chatbot
-
-# Extend volume size
-flyctl volumes extend chatbot_data --size 20 --app roll20-chatbot
-
-# Delete volume (WARNING: This will delete all data!)
-flyctl volumes destroy chatbot_data --app roll20-chatbot
-```
 
 ### Rules Management
 
@@ -322,14 +394,14 @@ Game rules are stored in `/data/rules/` and can be updated without redeploying:
 
 ```bash
 # SSH into machine
-flyctl ssh console --app roll20-chatbot
+flyctl ssh console --app gm-chatbot
 
 # Edit rules (example)
 cd /data/rules/shadowdark
 vi core.yaml
 
 # Restart app to reload rules
-flyctl apps restart roll20-chatbot
+flyctl apps restart gm-chatbot
 ```
 
 ### Character Sheet Import/Export
@@ -340,7 +412,7 @@ Players can export and import their character sheets via the API:
 ```bash
 # Get character sheet as YAML
 curl -X GET \
-  "https://your-app.fly.dev/api/v1/campaigns/{campaign_id}/characters/{character_id}/export" \
+  "https://gm-chatbot.fly.dev/api/v1/campaigns/{campaign_id}/characters/{character_id}/export" \
   -H "Accept: application/x-yaml" \
   -o character.yaml
 ```
@@ -349,7 +421,7 @@ curl -X GET \
 ```bash
 # Import character sheet from YAML
 curl -X POST \
-  "https://your-app.fly.dev/api/v1/campaigns/{campaign_id}/characters/import" \
+  "https://gm-chatbot.fly.dev/api/v1/campaigns/{campaign_id}/characters/import" \
   -H "Content-Type: application/x-yaml" \
   --data-binary @character.yaml
 ```
@@ -359,6 +431,34 @@ curl -X POST \
 - Share characters between campaigns
 - Import characters from external tools
 - Restore lost character data
+
+## Troubleshooting
+
+### Volume Issues
+
+**Volume Not Found During Deployment:**
+- Check that `volumes.toml` exists and is properly formatted
+- Verify volume configuration matches `fly.toml` (app name, region)
+- Check Fly.io API token has proper permissions
+- Review GitHub Actions logs for volume creation errors
+
+**Volume Creation Fails:**
+- Verify app exists: `flyctl apps list`
+- Check region is valid: `flyctl regions list`
+- Ensure sufficient Fly.io quota for volume creation
+- Check volume name doesn't conflict with existing volumes
+
+**Volume Mount Issues:**
+- Verify volume exists: `flyctl volumes list --app gm-chatbot`
+- Check volume is in same region as app
+- Verify `fly.toml` has correct mount configuration
+- Restart app after volume creation: `flyctl apps restart gm-chatbot`
+
+**Script Execution Issues:**
+- Ensure script is executable: `chmod +x infrastructure/manage-volumes.sh`
+- Verify `jq` is installed (required for JSON parsing)
+- Check TOML file syntax is valid
+- Test script locally with `DRY_RUN=true` flag
 
 ## Rollback
 
