@@ -1,0 +1,119 @@
+metadata:
+  system_name: "Shadowdark RPG"
+  version: "1.0.0"
+  author: "The Arcane Library"
+
+abilities:
+  - name: "strength"
+    abbreviation: "STR"
+    description: "Physical power, melee attacks, carrying capacity"
+  - name: "dexterity"
+    abbreviation: "DEX"
+    description: "Agility, ranged attacks, armor class bonus"
+  - name: "constitution"
+    abbreviation: "CON"
+    description: "Health, stamina, hit points"
+  - name: "intelligence"
+    abbreviation: "INT"
+    description: "Learning, memory, wizard spellcasting"
+  - name: "wisdom"
+    abbreviation: "WIS"
+    description: "Perception, insight, priest spellcasting"
+  - name: "charisma"
+    abbreviation: "CHA"
+    description: "Leadership, persuasion, social interaction"
+
+ability_modifiers:
+  description: "Modifier based on ability score"
+  range_mapping:
+    - range: [1, 3]
+      modifier: -4
+    - range: [4, 5]
+      modifier: -3
+    - range: [6, 7]
+      modifier: -2
+    - range: [8, 9]
+      modifier: -1
+    - range: [10, 11]
+      modifier: 0
+    - range: [12, 13]
+      modifier: 1
+    - range: [14, 15]
+      modifier: 2
+    - range: [16, 17]
+      modifier: 3
+    - range: [18, 20]
+      modifier: 4
+
+difficulty_classes:
+  easy: 9
+  normal: 12
+  hard: 15
+  extreme: 18
+
+dice_expressions:
+  ability_check: "1d20 + {modifier}"
+  attack_roll: "1d20 + {attack_bonus}"
+  saving_throw: "1d20 + {modifier}"
+  damage_roll: "{weapon_damage} + {strength_modifier}"
+
+conditions:
+  - name: "blinded"
+    effects:
+      - "Automatically fail checks requiring sight"
+      - "Attacks against you have advantage"
+      - "Your attacks have disadvantage"
+  - name: "charmed"
+    effects:
+      - "Cannot attack the charmer"
+      - "Charmer has advantage on social checks"
+  - name: "frightened"
+    effects:
+      - "Disadvantage on checks while source visible"
+      - "Cannot willingly move closer to source"
+  - name: "deafened"
+    effects:
+      - "Automatically fail checks requiring hearing"
+  - name: "grappled"
+    effects:
+      - "Speed becomes 0"
+      - "Cannot benefit from speed bonuses"
+  - name: "incapacitated"
+    effects:
+      - "Cannot take actions or reactions"
+  - name: "invisible"
+    effects:
+      - "Attacks against you have disadvantage"
+      - "Your attacks have advantage"
+  - name: "paralyzed"
+    effects:
+      - "Cannot take actions"
+      - "Automatically fail Strength and Dexterity saves"
+      - "Attacks against you have advantage"
+  - name: "petrified"
+    effects:
+      - "Turned to stone"
+      - "Cannot take actions"
+      - "Resistant to all damage"
+  - name: "poisoned"
+    effects:
+      - "Disadvantage on attack rolls and ability checks"
+  - name: "prone"
+    effects:
+      - "Melee attacks have advantage"
+      - "Ranged attacks have disadvantage"
+  - name: "restrained"
+    effects:
+      - "Speed becomes 0"
+      - "Disadvantage on attack rolls"
+      - "Attacks against you have advantage"
+  - name: "stunned"
+    effects:
+      - "Cannot take actions"
+      - "Automatically fail Strength and Dexterity saves"
+  - name: "unconscious"
+    effects:
+      - "Cannot take actions"
+      - "Unaware of surroundings"
+      - "Automatically fail Strength and Dexterity saves"
+      - "Attacks against you have advantage"

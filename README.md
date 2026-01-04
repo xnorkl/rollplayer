@@ -1,218 +1,103 @@
-# Roll20 GM Chatbot for Shadowdark RPG
+# GM Chatbot
 
-A Game Master chatbot for Roll20 that understands Shadowdark RPG rules, handles dice rolls, manages combat, and provides rule clarifications using AI.
+Game Master Assistant for tabletop RPGs - A modular, multi-campaign REST API platform with AI-powered GM assistance.
 
 ## Features
 
-- **Dice Rolling**: Parse and execute dice expressions (e.g., `2d6+3`, `1d20`)
-- **Ability Checks**: Perform ability checks with DC calculations
-- **Combat Tracking**: Manage initiative, turn order, HP, AC, and status effects
-- **Spell Management**: Track spell slots and handle spell casting
-- **AI-Powered Rules**: Answer natural language questions about Shadowdark RPG rules
-- **Command-Based Actions**: Quick commands for common game actions
+- **Multi-Campaign Support**: Manage multiple campaigns with isolated game state
+- **REST API**: Full REST API with OpenAPI 3.1 documentation
+- **WebSocket Support**: Real-time chat via WebSocket
+- **YAML-Based Configuration**: Game rules and campaign artifacts stored as YAML
+- **Type-Safe Models**: Pydantic v2 with strict validation
+- **External Dice Tools**: Delegated dice rolling for auditability
+- **LLM Integration**: Support for OpenAI and Anthropic
+- **Platform Adapters**: REST, Roll20, and CLI adapters
 
-## Setup
+## Quick Start
 
 ### Prerequisites
 
-1. Python 3.8 or higher
-2. [Tampermonkey](https://www.tampermonkey.net/) browser extension
-3. (Optional) OpenAI API key for AI features
+- Python 3.12+
+- [UV](https://github.com/astral-sh/uv) package manager
 
-### Local Installation
+### Installation
 
-1. Install Python dependencies:
+```bash
+# Install dependencies
+uv sync
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+# Run the API server
+uv run python -m gm_chatbot.main
+```
 
-2. Install Tampermonkey in your browser
+The API will be available at `http://localhost:8000`
 
-3. Add the `chat_connector.js` script to Tampermonkey:
+### API Documentation
 
-   - Open Tampermonkey dashboard
-   - Create a new script
-   - Copy and paste the contents of `chat_connector.js`
-   - Save the script
+Once the server is running, visit:
 
-4. (Optional) Set up OpenAI API key for AI features:
+- **Scalar API Reference**: `http://localhost:8000/docs`
+- **OpenAPI Schema**: `http://localhost:8000/openapi.json`
 
-   ```bash
-   export OPENAI_API_KEY="your-api-key-here"
-   ```
+### CLI Client
 
-5. Start the chatbot server:
+```bash
+# List campaigns
+uv run python scripts/cli.py campaigns
 
-   ```bash
-   python3 chat_bot.py
-   ```
+# Roll dice
+uv run python scripts/cli.py roll "2d6+3"
 
-6. Connect to your Roll20 game - the chatbot will automatically connect via WebSocket
-
-### Fly.io Deployment (Production)
-
-For production hosting on Fly.io with GitOps:
-
-1. **Install Fly.io CLI**:
-
-   ```bash
-   curl -L https://fly.io/install.sh | sh
-   ```
-
-2. **Authenticate**:
-
-   ```bash
-   flyctl auth login
-   ```
-
-3. **Create app and deploy**:
-
-   ```bash
-   flyctl apps create roll20-chatbot
-   flyctl secrets set OPENAI_API_KEY=your-api-key-here
-   # Copy fly.toml to project root (build context must be project root)
-   cp infrastructure/fly.toml fly.toml
-   flyctl deploy
-   ```
-
-4. **Update client configuration**:
-
-   - Get your app URL: `flyctl status --app roll20-chatbot`
-   - Update `chat_connector.js` WebSocket URL to `wss://your-app.fly.dev`
-   - Or configure at runtime: `localStorage.setItem('roll20_chatbot_ws_url', 'wss://your-app.fly.dev')`
-
-5. **GitOps (Automatic deployments)**:
-   - Set `FLY_API_TOKEN` secret in GitHub Actions
-   - Push to `main` branch to trigger automatic deployment
-
-See [infrastructure/README.md](infrastructure/README.md) for detailed deployment documentation.
-
-## Configuration
-
-Edit `config.py` or set environment variables to customize:
-
-- `OPENAI_API_KEY`: Your OpenAI API key (optional, for AI features)
-- `LLM_MODEL`: Model to use (default: `gpt-4o-mini`)
-- `WS_ADDRESS`: WebSocket address (default: `127.0.0.1`)
-- `WS_PORT`: WebSocket port (default: `5678`)
-- `LOG_LEVEL`: Logging level (default: `INFO`)
-
-## Usage
-
-### Commands
-
-All commands start with `!`:
-
-#### Dice & Rolls
-
-- `!roll <expression>` - Roll dice
-  - Example: `!roll 2d6+3`, `!roll 1d20`
-- `!check <ability> [DC]` - Ability check
-  - Example: `!check strength 15`, `!check dex`
-- `!attack <target> [modifier]` - Attack roll
-  - Example: `!attack goblin +5`
-- `!damage <target> <expression>` - Apply damage
-  - Example: `!damage goblin 2d6`
-
-#### Combat Management
-
-- `!combat start` - Start combat tracking
-- `!combat end` - End combat
-- `!combat status` - Show current combat status
-- `!combat next` - Advance to next turn
-- `!initiative <name> [dex_modifier]` - Roll initiative
-  - Example: `!initiative player1 +2`
-- `!hp <target> <value> [max]` - Set HP
-  - Example: `!hp goblin 10 15`
-- `!ac <target> <value>` - Set AC
-  - Example: `!ac goblin 15`
-
-#### Spells
-
-- `!spell <spell_name> [target]` - Cast spell
-  - Example: `!spell magic_missile goblin`
-
-#### Help
-
-- `!help` - Show command reference
-
-### Natural Language Queries
-
-Ask questions in plain English for rule clarifications:
-
-- "What's the DC for a hard check?"
-- "How does initiative work in Shadowdark?"
-- "What are the ability modifiers?"
-- "How do spell slots work?"
-
-The AI will provide answers based on Shadowdark RPG rules.
-
-## Shadowdark RPG Rules
-
-The chatbot implements key Shadowdark mechanics:
-
-- **Ability Checks**: d20 + ability modifier vs DC
-
-  - Easy: DC 5
-  - Normal: DC 10
-  - Hard: DC 15
-  - Very Hard: DC 20
-
-- **Combat**:
-
-  - Initiative: d20 + Dexterity modifier
-  - Attack: d20 + modifier vs AC
-  - Damage: Roll weapon/spell damage dice
-
-- **Ability Modifiers**: Based on ability scores (1-20 range)
+# Send chat message
+uv run python scripts/cli.py chat <campaign_id> "Hello GM!"
+```
 
 ## Architecture
 
-The chatbot uses a WebSocket bridge architecture:
+The system is built with a modular architecture:
 
-1. **chat_connector.js** (Tampermonkey script) - Monitors Roll20 chat and forwards messages
-2. **chat_bot.py** - WebSocket server that receives messages
-3. **gm_handler.py** - Main handler that coordinates responses
-4. **command_parser.py** - Parses and executes game commands
-5. **game_engine.py** - Core game mechanics (dice, combat, spells)
-6. **ai_handler.py** - AI integration for rule queries
+- **Models**: Pydantic models for all data structures
+- **Services**: Business logic layer (CampaignService, CharacterService, GameStateService, GMService)
+- **API**: FastAPI REST endpoints and WebSocket support
+- **Tools**: External integrations (dice tools, LLM providers)
+- **Adapters**: Platform-specific integrations (REST, Roll20, CLI)
+- **Artifacts**: YAML-based persistence layer
+
+## Configuration
+
+Set environment variables for LLM providers:
+
+```bash
+export OPENAI_API_KEY="your-key"
+export ANTHROPIC_API_KEY="your-key"
+```
 
 ## Development
 
-### Project Structure
+```bash
+# Install dev dependencies
+uv sync --dev
 
-```
-roll20_chatbot/
-├── infrastructure/          # Infrastructure as Code
-│   ├── Dockerfile          # Container image
-│   ├── fly.toml            # Fly.io configuration
-│   └── README.md           # Deployment docs
-├── .github/
-│   └── workflows/
-│       └── deploy-fly.yml  # GitOps workflow
-├── chat_bot.py             # WebSocket server
-├── chat_connector.js       # Tampermonkey script
-├── game_engine.py          # Core game mechanics
-├── command_parser.py       # Command parsing
-├── ai_handler.py           # LLM integration
-├── gm_handler.py           # Main GM handler
-├── config.py               # Configuration
-├── shadowdark_rules.py     # Shadowdark rule definitions
-├── requirements.txt        # Dependencies
-└── README.md               # This file
+# Run linting
+uv run ruff check .
+
+# Run type checking
+uv run ty check
+
+# Run tests
+uv run pytest tests/ -v
 ```
 
-### Testing
+## Deployment
 
-Run smoke tests:
+The application is containerized and can be deployed to Fly.io:
 
 ```bash
-python3 smoke_test.py
+flyctl deploy
 ```
 
-See [TESTING.md](TESTING.md) for detailed testing documentation.
+See `infrastructure/fly.toml` for configuration.
 
 ## License
 
-See LICENSE file for details.
+See LICENSE file.

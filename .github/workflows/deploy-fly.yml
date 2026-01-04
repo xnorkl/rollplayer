@@ -57,11 +57,11 @@ jobs:
       - name: Deployment notification
         if: success()
         run: |
-          echo "✅ Deployment successful!"
+          echo "[+] Deployment successful!"
           echo "App URL: https://roll20-chatbot.fly.dev"
 
       - name: Deployment failure notification
         if: failure()
         run: |
-          echo "❌ Deployment failed!"
+          echo "[-] Deployment failed!"
           exit 1
