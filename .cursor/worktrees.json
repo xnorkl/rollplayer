@@ -1,0 +1,12 @@
+{
+  "setup-worktree": [
+    "uv sync",
+    "cp $ROOT_WORKTREE_PATH/.env .env"
+  ],
+  "pre-commit": [
+    "uv run ruff check src/",
+    "uv run ruff format --check src/",
+    "uv run ty check src/",
+    "uv run pytest --cov=gm_chatbot --cov-report=xml"
+  ]
+}

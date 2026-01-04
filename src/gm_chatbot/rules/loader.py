@@ -1,5 +1,6 @@
 """Rule loader for YAML rule files."""
 
+import os
 import yaml
 from pathlib import Path
 from typing import Optional
@@ -12,13 +13,15 @@ from ..models.rules import RuleSet
 class RuleLoader:
     """Loads and validates game rules from YAML files."""
 
-    def __init__(self, rules_dir: Path | str = "rules"):
+    def __init__(self, rules_dir: Path | str | None = None):
         """
         Initialize rule loader.
 
         Args:
-            rules_dir: Directory containing rule YAML files
+            rules_dir: Directory containing rule YAML files (defaults to RULES_DIR env var or /data/rules)
         """
+        if rules_dir is None:
+            rules_dir = os.getenv("RULES_DIR", "/data/rules")
         self.rules_dir = Path(rules_dir)
         self._cache: dict[str, RuleSet] = {}
 

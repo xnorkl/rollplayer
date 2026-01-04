@@ -1,8 +1,10 @@
 # ADR 0001: Architecture Overview
 
+> **⚠️ Historical Document**: This ADR describes the **old architecture** (v1.0) that used WebSocket-based communication, command parsing, and in-memory state. The current architecture (v2.0) is documented in [requirements.md](requirements.md) and uses a REST API, YAML-based rules, multi-campaign support, and persistent artifacts. This document is preserved for historical reference only.
+
 ## Status
 
-Accepted
+Superseded (v2.0 architecture replaces this design)
 
 ## Context
 

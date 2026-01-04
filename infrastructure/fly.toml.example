@@ -15,15 +15,13 @@ primary_region = "iad"  # Examples: iad (US East), ord (US Central), lhr (London
   dockerfile = "infrastructure/Dockerfile"
 
 [env]
-  # WebSocket server should bind to all interfaces in Fly.io
-  WS_ADDRESS = "0.0.0.0"
   # Logging level: DEBUG, INFO, WARNING, ERROR
   LOG_LEVEL = "INFO"
   # PORT is automatically set by Fly.io, don't override
 
 [http_service]
   # Internal port where the app listens
-  internal_port = 5678
+  internal_port = 8000
   # Force HTTPS for all connections
   force_https = true
   # Keep machines running (set to true for always-on)
@@ -41,31 +39,10 @@ primary_region = "iad"  # Examples: iad (US East), ord (US Central), lhr (London
     path = "/health"      # Health check path (requires health endpoint)
 
 [processes]
-  app = "python3 chat_bot.py"
+  app = "python -m gm_chatbot.main"
 
-# WebSocket service configuration
-[[services]]
-  internal_port = 5678
-  protocol = "tcp"
-  processes = ["app"]
-
-  # HTTPS/WSS endpoint
-  [[services.ports]]
-    port = 443
-    handlers = ["tls", "http"]
-    force_https = true
-
-  # HTTP/WS endpoint (redirects to HTTPS)
-  [[services.ports]]
-    port = 80
-    handlers = ["http"]
-    force_https = true
-
-  # TCP health check for WebSocket
-  [[services.tcp_checks]]
-    grace_period = "10s"
-    interval = "30s"
-    timeout = "5s"
+# Note: WebSocket support is available via the REST API endpoints
+# See docs/requirements.md for WebSocket endpoint details
 
 # Resource limits
 [vm]
@@ -78,8 +55,10 @@ primary_region = "iad"  # Examples: iad (US East), ord (US Central), lhr (London
 #   min = 1
 #   max = 1
 
-# Optional: Mount volumes for persistent storage (if needed)
-# [[mounts]]
-#   source = "chatbot_data"
-#   destination = "/data"
+# Persistent storage volume mount
+# Required for production deployments to persist campaign data and rules
+# Create volume first: flyctl volumes create chatbot_data --size 10
+[[mounts]]
+  source = "chatbot_data"
+  destination = "/data"
 

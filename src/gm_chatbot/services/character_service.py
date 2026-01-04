@@ -60,8 +60,8 @@ class CharacterService:
         prefix = "pc" if character_type == "player_character" else "npc"
         filename = f"{prefix}_{name.lower().replace(' ', '_')}.yaml"
 
-        # Save character
-        self.store.save_artifact(character, campaign_id, "character", filename)
+        # Save character in characters subdirectory
+        self.store.save_artifact(character, campaign_id, "character", f"characters/{filename}")
 
         return character
 
@@ -222,3 +222,36 @@ class CharacterService:
                 continue
 
         raise FileNotFoundError(f"Character {character_id} not found")
+
+    async def import_character(
+        self,
+        campaign_id: str,
+        character: CharacterSheet,
+    ) -> CharacterSheet:
+        """
+        Import a character from YAML.
+
+        Args:
+            campaign_id: Campaign identifier
+            character: Character sheet to import
+
+        Returns:
+            Imported character sheet
+        """
+        # Validate before saving
+        self.validator.validate_character(character.model_dump())
+
+        # Generate new ID if not provided
+        if not character.metadata.id:
+            from uuid import uuid4
+
+            character.metadata.id = str(uuid4())
+
+        # Generate filename
+        prefix = "pc" if character.character_type == "player_character" else "npc"
+        filename = f"{prefix}_{character.identity.name.lower().replace(' ', '_')}.yaml"
+
+        # Save character
+        self.store.save_artifact(character, campaign_id, "character", f"characters/{filename}")
+
+        return character
