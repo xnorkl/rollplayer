@@ -113,7 +113,7 @@ ensure_volume() {
         return 0
     fi
 
-    if flyctl volumes create "$name" --size "$size_gb" --region "$region" --app "$app"; then
+    if flyctl volumes create "$name" --size "$size_gb" --region "$region" --app "$app" --yes; then
         log_info "Successfully created volume '$name'"
         return 0
     else
@@ -225,7 +225,7 @@ extend_volume() {
         return 0
     fi
 
-    flyctl volumes extend "$volume_name" --size "$new_size" --app "$app"
+    flyctl volumes extend "$volume_name" --size "$new_size" --app "$app" --yes
 }
 
 # Main command handler
