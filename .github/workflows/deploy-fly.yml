@@ -14,10 +14,11 @@ on:
         type: boolean
 
 jobs:
-  deploy:
-    name: Deploy to Fly.io
+  build:
+    name: Build and Validate
     runs-on: ubuntu-latest
-
+    outputs:
+      app_name: ${{ steps.get-app-name.outputs.app_name }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -28,6 +29,16 @@ jobs:
       - name: Set up Python
         run: uv python install 3.12
 
+      - name: Cache Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            .venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml', 'uv.lock*') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
       - name: Install dependencies
         run: uv sync --no-dev --no-install-project
 
@@ -35,6 +46,20 @@ jobs:
         if: github.event.inputs.skip_tests != 'true'
         run: |
           uv run python smoke_test.py || echo "Smoke tests failed but continuing deployment"
+
+      - name: Get app name
+        id: get-app-name
+        run: |
+          APP_NAME=$(grep '^app =' infrastructure/fly.toml | cut -d'"' -f2)
+          echo "app_name=$APP_NAME" >> $GITHUB_OUTPUT
+
+  deploy:
+    name: Deploy to Fly.io
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Setup Fly.io CLI
         uses: superfly/flyctl-actions/setup-flyctl@master
@@ -44,6 +69,19 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y jq
 
+      - name: Ensure Fly.io app exists
+        id: ensure-app
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          APP_NAME=$(grep '^app =' infrastructure/fly.toml | cut -d'"' -f2)
+          if ! flyctl apps list --json | jq -e ".[] | select(.Name == \"$APP_NAME\")" > /dev/null 2>&1; then
+            echo "App '$APP_NAME' does not exist, creating..."
+            flyctl apps create "$APP_NAME" || echo "App creation failed or already exists"
+          else
+            echo "App '$APP_NAME' already exists"
+          fi
+
       - name: Ensure Fly.io volumes exist
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -51,6 +89,11 @@ jobs:
           chmod +x infrastructure/manage-volumes.sh
           ./infrastructure/manage-volumes.sh ensure
         continue-on-error: false
+
+      - name: Prepare deployment
+        run: |
+          # Copy fly.toml to project root (required for flyctl deploy)
+          cp infrastructure/fly.toml fly.toml
 
       - name: Deploy to Fly.io
         env:
@@ -63,13 +106,15 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
-          flyctl status --app roll20-chatbot || echo "Status check failed"
+          APP_NAME=$(grep '^app =' infrastructure/fly.toml | cut -d'"' -f2)
+          flyctl status --app "$APP_NAME" || echo "Status check failed"
 
       - name: Deployment notification
         if: success()
         run: |
+          APP_NAME=$(grep '^app =' infrastructure/fly.toml | cut -d'"' -f2)
           echo "[+] Deployment successful!"
-          echo "App URL: https://roll20-chatbot.fly.dev"
+          echo "App URL: https://${APP_NAME}.fly.dev"
 
       - name: Deployment failure notification
         if: failure()
