@@ -52,7 +52,7 @@ def create_app() -> FastAPI:
         )
 
     # Include routers
-    from .routers import campaigns, characters, actions, chat, tools, rules, health
+    from .routers import campaigns, characters, actions, chat, tools, rules, health, players, sessions
 
     app.include_router(health.router, tags=["Health"])
     app.include_router(campaigns.router, prefix="/api/v1", tags=["Campaigns"])
@@ -61,5 +61,7 @@ def create_app() -> FastAPI:
     app.include_router(chat.router, prefix="/api/v1", tags=["Chat"])
     app.include_router(tools.router, prefix="/api/v1", tags=["Tools"])
     app.include_router(rules.router, prefix="/api/v1", tags=["Rules"])
+    app.include_router(players.router, prefix="/api/v1", tags=["Players"])
+    app.include_router(sessions.router, prefix="/api/v1", tags=["Sessions"])
 
     return app

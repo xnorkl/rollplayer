@@ -7,6 +7,9 @@ from .action import ActionOutcome, GameAction, StateChange
 from .rules import AbilityDefinition, AbilityModifierConfig, RuleMetadata, RuleSet
 from .dice import DiceResult
 from .chat import APIResponse, ChatMessage, ErrorDetail, ResponseMeta
+from .player import Player
+from .membership import CampaignMembership
+from .session import Session, SessionParticipant
 
 __all__ = [
     "ArtifactMetadata",
@@ -25,4 +28,8 @@ __all__ = [
     "APIResponse",
     "ErrorDetail",
     "ResponseMeta",
+    "Player",
+    "CampaignMembership",
+    "Session",
+    "SessionParticipant",
 ]
