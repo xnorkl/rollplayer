@@ -22,6 +22,10 @@ class ArtifactStore:
             campaigns_dir = os.getenv("CAMPAIGNS_DIR", "/data/campaigns")
         self.campaigns_dir = Path(campaigns_dir)
         self.campaigns_dir.mkdir(parents=True, exist_ok=True)
+        # Players directory (top-level, independent of campaigns)
+        players_dir = os.getenv("PLAYERS_DIR", "/data/players")
+        self.players_dir = Path(players_dir)
+        self.players_dir.mkdir(parents=True, exist_ok=True)
 
     def get_campaign_dir(self, campaign_id: str) -> Path:
         """
@@ -148,3 +152,48 @@ class ArtifactStore:
         file_path = self.get_campaign_dir(campaign_id) / filename
         if file_path.exists():
             file_path.unlink()
+
+    def get_players_dir(self) -> Path:
+        """
+        Get directory path for players.
+
+        Returns:
+            Path to players directory
+        """
+        return self.players_dir
+
+    def get_player_dir(self, player_id: str) -> Path:
+        """
+        Get directory path for a specific player.
+
+        Args:
+            player_id: Player identifier
+
+        Returns:
+            Path to player directory
+        """
+        return self.players_dir / player_id
+
+    def get_memberships_dir(self, campaign_id: str) -> Path:
+        """
+        Get directory path for campaign memberships.
+
+        Args:
+            campaign_id: Campaign identifier
+
+        Returns:
+            Path to memberships directory
+        """
+        return self.get_campaign_dir(campaign_id) / "memberships"
+
+    def get_sessions_dir(self, campaign_id: str) -> Path:
+        """
+        Get directory path for campaign sessions.
+
+        Args:
+            campaign_id: Campaign identifier
+
+        Returns:
+            Path to sessions directory
+        """
+        return self.get_campaign_dir(campaign_id) / "sessions"

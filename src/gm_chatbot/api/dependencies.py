@@ -6,6 +6,8 @@ from ..artifacts.store import ArtifactStore
 from ..services.campaign_service import CampaignService
 from ..services.character_service import CharacterService
 from ..services.game_state_service import GameStateService
+from ..services.player_service import PlayerService
+from ..services.session_service import SessionService
 from ..tools.registry import DiceToolRegistry
 
 
@@ -14,6 +16,8 @@ _store: ArtifactStore | None = None
 _campaign_service: CampaignService | None = None
 _character_service: CharacterService | None = None
 _game_state_service: GameStateService | None = None
+_player_service: PlayerService | None = None
+_session_service: SessionService | None = None
 _dice_tool_registry: DiceToolRegistry | None = None
 
 
@@ -59,3 +63,19 @@ def get_dice_tool_registry() -> DiceToolRegistry:
     if _dice_tool_registry is None:
         _dice_tool_registry = DiceToolRegistry()
     return _dice_tool_registry
+
+
+def get_player_service() -> PlayerService:
+    """Get player service instance."""
+    global _player_service
+    if _player_service is None:
+        _player_service = PlayerService(get_artifact_store())
+    return _player_service
+
+
+def get_session_service() -> SessionService:
+    """Get session service instance."""
+    global _session_service
+    if _session_service is None:
+        _session_service = SessionService(get_artifact_store())
+    return _session_service

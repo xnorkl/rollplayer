@@ -1,7 +1,7 @@
 """Game action models."""
 
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Optional
 from uuid import uuid4
 
 from pydantic import Field
@@ -40,3 +40,6 @@ class GameAction(BaseModel):
     parameters: dict = Field(default_factory=dict)  # Action-specific parameters
     dice_results: list[DiceResult] = Field(default_factory=list)
     outcome: ActionOutcome
+    session_id: Optional[str] = Field(
+        default=None, description="Session during which this action occurred"
+    )
