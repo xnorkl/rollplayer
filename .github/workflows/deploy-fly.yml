@@ -1,18 +1,11 @@
 name: Deploy to Fly.io
 
 on:
-  push:
-    branches:
-      - main
-      - master
-  workflow_dispatch:
-    inputs:
-      skip_tests:
-        description: "Skip smoke tests"
-        required: false
-        default: false
-        type: boolean
-
+  workflow_run:
+    workflows:
+      - test
+    types:
+      - completed
 jobs:
   build:
     name: Build and Validate
