@@ -1,5 +1,7 @@
 # GM Chatbot
 
+[![codecov](https://codecov.io/gh/xnorkl/Roll20_Shadowdark_GM/branch/main/graph/badge.svg)](https://codecov.io/gh/xnorkl/Roll20_Shadowdark_GM)
+
 Game Master Assistant for tabletop RPGs - A modular, multi-campaign REST API platform with AI-powered GM assistance.
 
 ## Features
