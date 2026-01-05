@@ -1,5 +1,6 @@
 """Store fixtures for testing."""
 
+import os
 import pytest
 import shutil
 import tempfile
@@ -17,6 +18,22 @@ def temp_campaigns_dir():
 
 
 @pytest.fixture
-def artifact_store(temp_campaigns_dir):
-    """Create artifact store with temp directory."""
-    return ArtifactStore(campaigns_dir=temp_campaigns_dir)
+def artifact_store():
+    """Create artifact store using environment variables if set, otherwise temp directory."""
+    # If environment variables are set (by setup_test_env), use them
+    # Otherwise, create a temp directory
+    if "CAMPAIGNS_DIR" in os.environ:
+        store = ArtifactStore()
+        yield store
+    else:
+        # Fallback for tests that don't use setup_test_env
+        temp_dir = tempfile.mkdtemp()
+        campaigns_dir = Path(temp_dir) / "campaigns"
+        players_dir = Path(temp_dir) / "players"
+        campaigns_dir.mkdir(parents=True, exist_ok=True)
+        players_dir.mkdir(parents=True, exist_ok=True)
+        store = ArtifactStore(
+            campaigns_dir=str(campaigns_dir), players_dir=str(players_dir)
+        )
+        yield store
+        shutil.rmtree(temp_dir, ignore_errors=True)
