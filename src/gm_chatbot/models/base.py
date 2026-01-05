@@ -44,4 +44,35 @@ class BaseArtifact(BaseModel):
         data = yaml.safe_load(content)
         if data is None:
             raise ValueError("YAML content is empty")
+        # Convert datetime strings back to datetime objects for Pydantic v2 strict mode
+        data = cls._parse_datetime_strings(data)
         return cls.model_validate(data)
+
+    @staticmethod
+    def _parse_datetime_strings(obj: Any) -> Any:
+        """Recursively parse datetime strings in dict/list structures."""
+        if isinstance(obj, dict):
+            return {k: BaseArtifact._parse_datetime_strings(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [BaseArtifact._parse_datetime_strings(item) for item in obj]
+        elif isinstance(obj, str):
+            # Try to parse ISO format datetime strings
+            # Look for ISO datetime pattern: YYYY-MM-DDTHH:MM:SS...
+            if "T" in obj and len(obj) > 10:
+                try:
+                    # Python 3.11+ fromisoformat can handle 'Z' directly
+                    # For older Python, replace 'Z' with '+00:00'
+                    if obj.endswith("Z"):
+                        # Try with Z first (Python 3.11+)
+                        try:
+                            return datetime.fromisoformat(obj.replace("Z", "+00:00"))
+                        except ValueError:
+                            # Fallback: remove Z and parse as naive datetime
+                            return datetime.fromisoformat(obj[:-1])
+                    else:
+                        # No Z suffix, try parsing as-is
+                        return datetime.fromisoformat(obj)
+                except (ValueError, AttributeError):
+                    # Not a datetime string, return as-is
+                    pass
+        return obj

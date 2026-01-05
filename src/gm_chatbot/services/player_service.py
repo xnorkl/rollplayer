@@ -133,9 +133,7 @@ class PlayerService:
         for player_dir in players_dir.iterdir():
             if player_dir.is_dir():
                 try:
-                    player = self.store.load_artifact(
-                        Player, player_dir.name, "player.yaml"
-                    )
+                    player = await self.get_player(player_dir.name)
                     if player.username == username:
                         return player
                 except Exception:
