@@ -1,5 +1,7 @@
 """Session service for session management."""
 
+from gm_chatbot.models import BaseArtifact
+
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -325,12 +327,10 @@ class SessionService:
                 )
 
         # Use default character if not specified and not GM
+        # Allow players to join without a character (character_id can be None)
         if not character_id and not is_gm:
             character_id = membership.character_id
-            if not character_id:
-                raise ValueError(
-                    f"Player {player_id} has no default character assigned"
-                )
+            # character_id can be None - players can join sessions without characters
 
         # Check if already a participant
         for participant in session.participants:
@@ -426,7 +426,7 @@ class SessionService:
 
     async def _get_membership(
         self, campaign_id: str, player_id: str
-    ) -> Optional[CampaignMembership]:
+    ) -> Optional[CampaignMembership] | BaseArtifact:
         """Get campaign membership for a player."""
         memberships_dir = self.store.get_memberships_dir(campaign_id)
         membership_file = memberships_dir / f"{player_id}.yaml"

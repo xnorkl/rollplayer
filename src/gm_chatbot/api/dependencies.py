@@ -79,3 +79,16 @@ def get_session_service() -> SessionService:
     if _session_service is None:
         _session_service = SessionService(get_artifact_store())
     return _session_service
+
+
+def reset_dependencies():
+    """Reset all global dependencies (for testing only)."""
+    global _store, _campaign_service, _character_service, _game_state_service
+    global _player_service, _session_service, _dice_tool_registry
+    _store = None
+    _campaign_service = None
+    _character_service = None
+    _game_state_service = None
+    _player_service = None
+    _session_service = None
+    _dice_tool_registry = None

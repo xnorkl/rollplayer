@@ -44,7 +44,10 @@ class CharacterService:
         from ..models.character import CharacterIdentity
 
         character_id = str(uuid4())
-        identity = CharacterIdentity(name=name, **kwargs.get("identity", {}))
+        identity_data = kwargs.get("identity", {}).copy()
+        # Remove 'name' from identity_data if present, since we're passing it explicitly
+        identity_data.pop("name", None)
+        identity = CharacterIdentity(name=name, **identity_data)
 
         character = CharacterSheet(
             character_type=character_type,
@@ -61,7 +64,9 @@ class CharacterService:
         filename = f"{prefix}_{name.lower().replace(' ', '_')}.yaml"
 
         # Save character in characters subdirectory
-        self.store.save_artifact(character, campaign_id, "character", f"characters/{filename}")
+        self.store.save_artifact(
+            character, campaign_id, "character", f"characters/{filename}"
+        )
 
         return character
 
@@ -86,17 +91,23 @@ class CharacterService:
         # Find character file by ID
         characters_dir = self.store.get_campaign_dir(campaign_id) / "characters"
         if not characters_dir.exists():
-            raise FileNotFoundError(f"Characters directory not found for campaign {campaign_id}")
+            raise FileNotFoundError(
+                f"Characters directory not found for campaign {campaign_id}"
+            )
 
         for char_file in characters_dir.glob("*.yaml"):
             try:
-                char = self.store.load_artifact(CharacterSheet, campaign_id, f"characters/{char_file.name}")
+                char = self.store.load_artifact(
+                    CharacterSheet, campaign_id, f"characters/{char_file.name}"
+                )
                 if char.metadata.id == character_id:
                     return char
             except Exception:
                 continue
 
-        raise FileNotFoundError(f"Character {character_id} not found in campaign {campaign_id}")
+        raise FileNotFoundError(
+            f"Character {character_id} not found in campaign {campaign_id}"
+        )
 
     async def get_character_by_filename(
         self,
@@ -119,7 +130,9 @@ class CharacterService:
             f"characters/{filename}",
         )
 
-    async def update_character(self, campaign_id: str, character: CharacterSheet) -> CharacterSheet:
+    async def update_character(
+        self, campaign_id: str, character: CharacterSheet
+    ) -> CharacterSheet:
         """
         Update a character.
 
@@ -252,6 +265,8 @@ class CharacterService:
         filename = f"{prefix}_{character.identity.name.lower().replace(' ', '_')}.yaml"
 
         # Save character
-        self.store.save_artifact(character, campaign_id, "character", f"characters/{filename}")
+        self.store.save_artifact(
+            character, campaign_id, "character", f"characters/{filename}"
+        )
 
         return character

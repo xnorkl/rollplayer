@@ -1,7 +1,7 @@
 """Base models for all artifacts."""
 
 import yaml
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -12,8 +12,8 @@ class ArtifactMetadata(BaseModel):
     """Metadata for all artifacts."""
 
     id: str = Field(default_factory=lambda: str(uuid4()))
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     version: int = Field(default=1, ge=1)
     schema_version: str = Field(default="1.0")
 
