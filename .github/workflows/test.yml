@@ -57,12 +57,12 @@ jobs:
             - name: Upload test results to Codecov
               if: ${{ !cancelled() }}
               uses: codecov/codecov-action@v5
-              report_type: test-results
               with:
+                  report_type: test-results
                   token: ${{ secrets.CODECOV_TOKEN }}
 
             - name: Upload coverage reports to Codecov
               uses: codecov/codecov-action@v5
-              report_type: coverage
               with:
+                  report_type: coverage
                   token: ${{ secrets.CODECOV_TOKEN }}
