@@ -40,8 +40,3 @@ dev-dependencies = [
     "ty>=0.0.8",
     "pre-commit>=4.0.0",
 ]
-
-[tool.ty]
-python-version = "3.12"
-strict = true
-warn-unreachable = true

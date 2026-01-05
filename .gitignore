@@ -40,3 +40,7 @@ Thumbs.db
 # Fly.io
 # fly.toml in root is generated from infrastructure/fly.toml
 fly.toml
+
+# Agents
+.cursor/
+PRD-*.md
