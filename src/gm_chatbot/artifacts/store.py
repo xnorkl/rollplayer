@@ -11,19 +11,35 @@ from ..models.base import BaseArtifact
 class ArtifactStore:
     """Manages YAML artifact persistence with atomic writes and file locking."""
 
-    def __init__(self, campaigns_dir: Path | str | None = None):
+    def __init__(
+        self,
+        campaigns_dir: Path | str | None = None,
+        players_dir: Path | str | None = None,
+    ):
         """
         Initialize artifact store.
 
         Args:
             campaigns_dir: Base directory for campaign artifacts (defaults to CAMPAIGNS_DIR env var or /data/campaigns)
+            players_dir: Base directory for player artifacts (defaults to PLAYERS_DIR env var, or derived from campaigns_dir, or /data/players)
         """
         if campaigns_dir is None:
             campaigns_dir = os.getenv("CAMPAIGNS_DIR", "/data/campaigns")
         self.campaigns_dir = Path(campaigns_dir)
         self.campaigns_dir.mkdir(parents=True, exist_ok=True)
         # Players directory (top-level, independent of campaigns)
-        players_dir = os.getenv("PLAYERS_DIR", "/data/players")
+        # If players_dir not provided, derive from campaigns_dir if campaigns_dir was explicitly provided,
+        # otherwise use env var or default
+        campaigns_dir_was_provided = campaigns_dir is not None
+        if players_dir is None:
+            # If campaigns_dir was explicitly provided (not from env/default), derive players_dir from it
+            # Use a unique name based on campaigns_dir to ensure test isolation
+            if campaigns_dir_was_provided:
+                players_dir = (
+                    self.campaigns_dir.parent / f"players_{self.campaigns_dir.name}"
+                )
+            else:
+                players_dir = os.getenv("PLAYERS_DIR", "/data/players")
         self.players_dir = Path(players_dir)
         self.players_dir.mkdir(parents=True, exist_ok=True)
 
