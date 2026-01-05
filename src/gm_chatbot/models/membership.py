@@ -15,7 +15,7 @@ class CampaignMembership(BaseArtifact):
     campaign_id: str = Field(..., min_length=1)
     role: Literal["player", "gm", "spectator"] = Field(default="player")
     character_id: Optional[str] = None  # Default character this player controls
-    joined_at: datetime = Field(default_factory=datetime.now(timezone.utc))
+    joined_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     def model_post_init(self, __context: Any) -> None:
         """Update metadata after initialization."""

@@ -124,7 +124,10 @@ class SessionService:
         Raises:
             ValueError: If session is ended (immutable)
         """
-        if session.status == "ended":
+        # Load existing session from storage to check its actual status
+        # (the passed-in session may have been modified)
+        existing = await self.get_session(campaign_id, session.metadata.id)
+        if existing.status == "ended":
             raise ValueError("Cannot modify an ended session")
 
         # Update timestamp
@@ -134,10 +137,10 @@ class SessionService:
         sessions_dir = self.store.get_sessions_dir(campaign_id)
         for session_file in sessions_dir.glob("*.yaml"):
             try:
-                existing = self.store.load_artifact(
+                file_session = self.store.load_artifact(
                     Session, campaign_id, f"sessions/{session_file.name}"
                 )
-                if existing.metadata.id == session.metadata.id:
+                if file_session.metadata.id == session.metadata.id:
                     self.store.save_artifact(
                         session, campaign_id, "session", f"sessions/{session_file.name}"
                     )
@@ -262,8 +265,9 @@ class SessionService:
         """
         sessions = await self.list_sessions(campaign_id)
         for session in sessions:
-            if session.status in ["active", "paused"]:
+            if session.status in ("active", "paused"):
                 return session
+
         return None
 
     async def join_session(

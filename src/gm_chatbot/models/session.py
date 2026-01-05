@@ -13,7 +13,7 @@ class SessionParticipant(BaseModel):
 
     player_id: str = Field(..., min_length=1)
     character_id: Optional[str] = None  # Character being played (nullable for GMs)
-    joined_at: datetime = Field(default_factory=datetime.now(timezone.utc))
+    joined_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     left_at: Optional[datetime] = None
     is_gm: bool = Field(default=False)
 
@@ -25,7 +25,7 @@ class Session(BaseArtifact):
     session_number: int = Field(..., ge=1)
     name: Optional[str] = None
     status: Literal["active", "paused", "ended"] = Field(default="active")
-    started_at: datetime = Field(default_factory=datetime.now(timezone.utc))
+    started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     ended_at: Optional[datetime] = None
     started_by: str = Field(..., min_length=1)  # Player ID who initiated the session
     notes: Optional[str] = None
