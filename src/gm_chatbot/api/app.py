@@ -1,8 +1,11 @@
 """FastAPI application factory."""
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from scalar_fastapi import get_scalar_api_reference, Layout, SearchHotKey
+
+from .exceptions import APIError
 
 
 def create_app() -> FastAPI:
@@ -34,6 +37,15 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # Custom exception handler for APIError to return {"error": {...}} format
+    @app.exception_handler(APIError)
+    async def api_error_handler(request: Request, exc: APIError):
+        """Handle APIError exceptions and return standardized error format."""
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"error": exc.detail},
+        )
+
     # Scalar API Reference
     @app.get("/docs", include_in_schema=False)
     async def scalar_docs():
@@ -52,7 +64,17 @@ def create_app() -> FastAPI:
         )
 
     # Include routers
-    from .routers import campaigns, characters, actions, chat, tools, rules, health, players, sessions
+    from .routers import (
+        campaigns,
+        characters,
+        actions,
+        chat,
+        tools,
+        rules,
+        health,
+        players,
+        sessions,
+    )
 
     app.include_router(health.router, tags=["Health"])
     app.include_router(campaigns.router, prefix="/api/v1", tags=["Campaigns"])
