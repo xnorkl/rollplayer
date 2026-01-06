@@ -1,6 +1,6 @@
 # ADR 0001: Architecture Overview
 
-> **⚠️ Historical Document**: This ADR describes the **old architecture** (v1.0) that used WebSocket-based communication, command parsing, and in-memory state. The current architecture (v2.0) is documented in [requirements.md](requirements.md) and uses a REST API, YAML-based rules, multi-campaign support, and persistent artifacts. This document is preserved for historical reference only.
+> **Historical Document**: This ADR describes the **old architecture** (v1.0) that used WebSocket-based communication, command parsing, and in-memory state. The current architecture (v2.0) is documented in [requirements.md](requirements.md) and uses a REST API, YAML-based rules, multi-campaign support, and persistent artifacts. This document is preserved for historical reference only.
 
 ## Status
 
@@ -39,31 +39,31 @@ graph TB
         Chat[Chat Interface]
         Script[Tampermonkey Script<br/>chat_connector.js]
     end
-    
+
     subgraph Transport["Transport Layer"]
         WS[WebSocket Connection<br/>ws:// or wss://]
     end
-    
+
     subgraph Server["Server Layer"]
         FastAPI[FastAPI WebSocket Server<br/>chat_bot.py]
     end
-    
+
     subgraph Application["Application Layer"]
         GMHandler[GM Handler<br/>gm_handler.py]
         CmdParser[Command Parser<br/>command_parser.py]
         GameEngine[Game Engine<br/>game_engine.py]
         AIHandler[AI Handler<br/>ai_handler.py]
     end
-    
+
     subgraph Rules["Rules Layer"]
         ShadowdarkRules[Shadowdark Rules<br/>shadowdark_rules.py]
     end
-    
+
     subgraph External["External Services"]
         OpenAI[OpenAI API]
         Anthropic[Anthropic API]
     end
-    
+
     Chat -->|MutationObserver| Script
     Script -->|WebSocket| WS
     WS -->|Messages| FastAPI
@@ -90,7 +90,7 @@ graph LR
     subgraph Client["Client Components"]
         Connector[chat_connector.js<br/>- MutationObserver<br/>- WebSocket Client<br/>- Message Injection]
     end
-    
+
     subgraph Server["Server Components"]
         ChatBot[chat_bot.py<br/>- WebSocket Handler<br/>- Package Parser<br/>- ChatEntry Extractor]
         GMHandler[gm_handler.py<br/>- Message Router<br/>- Response Coordinator]
@@ -100,7 +100,7 @@ graph LR
         Config[config.py<br/>- Environment Config<br/>- Constants]
         Rules[shadowdark_rules.py<br/>- Rule Definitions<br/>- Ability Modifiers]
     end
-    
+
     Connector -->|WebSocket| ChatBot
     ChatBot --> GMHandler
     GMHandler --> CmdParser
@@ -127,7 +127,7 @@ sequenceDiagram
     participant GE as Game Engine
     participant AI as AI Handler
     participant LLM as LLM API
-    
+
     R20->>TM: New chat message detected<br/>(MutationObserver)
     TM->>TM: Extract message HTML/JSON
     TM->>WS: Send Package JSON<br/>{type: "chat", data: ...}
@@ -135,7 +135,7 @@ sequenceDiagram
     API->>API: Parse Package from JSON
     API->>API: Extract ChatEntry<br/>(HTML or API format)
     API->>GM: handle_message(chat_entry)
-    
+
     alt Command (! prefix)
         GM->>CP: parse(command)
         CP->>GE: Execute game command
@@ -152,7 +152,7 @@ sequenceDiagram
         AI-->>GM: Answer string
         GM->>GM: Format as BotResponse
     end
-    
+
     GM-->>API: BotResponse or string
     API->>API: Convert to JSON
     API->>WS: Send response via WebSocket
@@ -167,11 +167,11 @@ sequenceDiagram
 ```mermaid
 flowchart TD
     Start[Chat Message Received] --> Parse{Message Type?}
-    
+
     Parse -->|Command !prefix| Command[Command Parser]
     Parse -->|Question| Question[AI Handler]
     Parse -->|Other| Ignore[Ignore Message]
-    
+
     Command --> CmdType{Command Type?}
     CmdType -->|roll| Dice[DiceRoller]
     CmdType -->|check| Ability[ShadowdarkRules.ability_check]
@@ -179,21 +179,21 @@ flowchart TD
     CmdType -->|combat| Combat[CombatTracker]
     CmdType -->|spell| Spell[SpellManager]
     CmdType -->|hp/ac| CombatState[CombatTracker.set_hp/set_ac]
-    
+
     Dice --> Result1[Generate Response]
     Ability --> Result1
     Attack --> Result1
     Combat --> Result1
     Spell --> Result1
     CombatState --> Result1
-    
+
     Question --> CheckCache{Cached?}
     CheckCache -->|Yes| CacheHit[Return Cached]
     CheckCache -->|No| LLMCall[Call LLM API]
     LLMCall --> Cache[Cache Response]
     Cache --> CacheHit
     CacheHit --> Result2[Format Response]
-    
+
     Result1 --> Format[Format BotResponse]
     Result2 --> Format
     Format --> Send[Send via WebSocket]
@@ -206,13 +206,15 @@ flowchart TD
 
 **Decision**: Use WebSocket to bridge Roll20's web interface with Python backend.
 
-**Rationale**: 
+**Rationale**:
+
 - Roll20 doesn't provide a direct API for chat integration
 - Browser extension (Tampermonkey) can monitor DOM changes
 - WebSocket provides real-time bidirectional communication
 - Enables seamless integration without modifying Roll20's codebase
 
 **Consequences**:
+
 - Real-time message processing
 - Low latency communication
 - Requires WebSocket support (wss:// for HTTPS pages)
@@ -223,12 +225,14 @@ flowchart TD
 **Decision**: Use `!` prefix for structured commands, natural language for AI queries.
 
 **Rationale**:
+
 - Clear distinction between structured commands and free-form questions
 - Easy to parse and route to appropriate handlers
 - Familiar pattern for many chat bots
 - Allows precise game mechanics execution
 
 **Consequences**:
+
 - Predictable command execution
 - Easy to extend with new commands
 - Users must learn command syntax
@@ -239,12 +243,14 @@ flowchart TD
 **Decision**: Combat tracker and spell manager are in-memory (per-instance), not persisted.
 
 **Rationale**:
+
 - Simplicity: no database required
 - Fast access: in-memory operations
 - Sufficient for single game session per instance
 - Reduces infrastructure complexity
 
 **Consequences**:
+
 - Simple deployment (no database)
 - Fast in-memory operations
 - State lost on server restart
@@ -256,12 +262,14 @@ flowchart TD
 **Decision**: Support both OpenAI and Anthropic with provider abstraction.
 
 **Rationale**:
+
 - Flexibility: users can choose preferred provider
 - Redundancy: fallback if one provider has issues
 - Cost optimization: use different models for different needs
 - Future-proof: easy to add more providers
 
 **Consequences**:
+
 - Provider flexibility
 - Better error handling (provider-specific messages)
 - More complex configuration
@@ -272,12 +280,14 @@ flowchart TD
 **Decision**: Support both old HTML format and new Roll20 API format for messages.
 
 **Rationale**:
+
 - Roll20 API format provides structured data (messageId, characterId, rollData)
 - Old HTML format still used in some contexts
 - Gradual migration path
 - Maintains compatibility during transition
 
 **Consequences**:
+
 - Works with both message formats
 - More complex parsing logic
 - Smooth transition path
@@ -287,12 +297,14 @@ flowchart TD
 **Decision**: Single FastAPI application deployed to Fly.io.
 
 **Rationale**:
+
 - Simplicity: single service to deploy and manage
 - Sufficient for current scale
 - FastAPI handles both HTTP and WebSocket
 - Easy to scale horizontally if needed
 
 **Consequences**:
+
 - Simple deployment
 - Single codebase
 - Easy to scale (add more instances)
@@ -301,21 +313,25 @@ flowchart TD
 ## Technology Stack
 
 ### Backend
+
 - **Language**: Python 3.11
 - **Framework**: FastAPI 0.115.0
 - **ASGI Server**: uvicorn 0.32.0
 - **HTML Parsing**: beautifulsoup4 4.12.0
 
 ### AI Integration
+
 - **OpenAI**: openai SDK >= 1.0.0
 - **Anthropic**: anthropic SDK >= 0.34.0
 
 ### Client
+
 - **Runtime**: JavaScript (browser)
 - **Platform**: Tampermonkey userscript
 - **Communication**: WebSocket API
 
 ### Deployment
+
 - **Container**: Docker (Python 3.11-slim base)
 - **Platform**: Fly.io
 - **Orchestration**: Fly.io managed
@@ -332,27 +348,27 @@ graph TB
             App[FastAPI Application<br/>chat_bot.py]
             Health[Health Check<br/>/health endpoint]
         end
-        
+
         subgraph Network["Network"]
             HTTP[HTTP/HTTPS<br/>Port 80/443]
             WS[WebSocket<br/>wss://]
         end
-        
+
         subgraph Config["Configuration"]
             Secrets[Fly.io Secrets<br/>API Keys, Config]
             Env[Environment Variables]
         end
     end
-    
+
     subgraph Client["Client"]
         Browser[Browser<br/>Roll20 + Tampermonkey]
     end
-    
+
     subgraph External["External APIs"]
         OpenAI[OpenAI API]
         Anthropic[Anthropic API]
     end
-    
+
     Browser -->|wss://| WS
     WS --> App
     HTTP --> Health
@@ -368,11 +384,11 @@ graph TB
 - **Platform**: Fly.io
 - **Container**: Docker (Python 3.11-slim base)
 - **Scaling**: Single instance (can scale horizontally)
-- **Health Checks**: 
+- **Health Checks**:
   - HTTP `/health` endpoint
   - TCP checks on port 5678
 - **Configuration**: Environment variables via Fly.io secrets
-- **Resources**: 
+- **Resources**:
   - CPU: 1 shared CPU
   - Memory: 256 MB (configurable)
 
@@ -417,17 +433,20 @@ graph TB
 
 ### Constraints
 
-1. **Roll20 API Limitations**: 
+1. **Roll20 API Limitations**:
+
    - No direct API access to Roll20 chat
    - Requires browser extension (Tampermonkey) to monitor DOM
    - Limited to what's available in the web interface
 
 2. **WebSocket Requirements**:
+
    - Must use `wss://` (secure WebSocket) for HTTPS pages
    - Connection must be maintained for real-time communication
    - Reconnection logic needed for reliability
 
 3. **State Management**:
+
    - Game state (combat, spells) is in-memory only
    - State lost on server restart
    - No persistence layer
@@ -439,11 +458,13 @@ graph TB
 ### Assumptions
 
 1. **User Environment**:
+
    - Users have Tampermonkey installed
    - Users can configure WebSocket URL
    - Users have Roll20 account and game access
 
 2. **Deployment**:
+
    - Fly.io platform availability
    - Docker container support
    - Environment variable configuration
