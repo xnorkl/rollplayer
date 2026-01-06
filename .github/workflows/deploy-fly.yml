@@ -3,7 +3,7 @@ name: Deploy to Fly.io
 on:
   workflow_run:
     workflows:
-      - "Run Tests"
+      - "Integration Tests"
     types:
       - completed
     branches:
@@ -16,13 +16,15 @@ jobs:
     # Proceed with deployment iff tests passed
     if: github.event.workflow_run.conclusion == 'success'
     steps:
-      - name: Verify Tests Passed
+      - name: Verify Integration Tests Passed
         run: |
           if [ "${{ github.event.workflow_run.conclusion }}" != "success" ]; then
-            echo "::error::Test workflow failed. Deployment cancelled."
+            echo "::error::Integration test workflow failed. Deployment cancelled."
             exit 1
           fi
-          echo "Tests passed; proceeding with deployment."
+          echo "✓ Integration tests passed"
+          echo "✓ Unit tests passed (verified by integration workflow)"
+          echo "Proceeding with deployment."
   build:
     name: Build and Validate
     runs-on: ubuntu-latest
