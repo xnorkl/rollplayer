@@ -213,3 +213,40 @@ class ArtifactStore:
             Path to sessions directory
         """
         return self.get_campaign_dir(campaign_id) / "sessions"
+
+    def get_discord_link_path(self, player_id: str) -> Path:
+        """
+        Get file path for Discord link artifact.
+
+        Args:
+            player_id: Player identifier
+
+        Returns:
+            Path to discord_link.yaml file
+        """
+        return self.get_player_dir(player_id) / "discord_link.yaml"
+
+    def get_discord_binding_path(self, campaign_id: str) -> Path:
+        """
+        Get file path for Discord binding artifact.
+
+        Args:
+            campaign_id: Campaign identifier
+
+        Returns:
+            Path to discord_binding.yaml file
+        """
+        return self.get_campaign_dir(campaign_id) / "discord_binding.yaml"
+
+    def get_session_thread_path(self, campaign_id: str, session_id: str) -> Path:
+        """
+        Get file path for session thread artifact.
+
+        Args:
+            campaign_id: Campaign identifier
+            session_id: Session identifier
+
+        Returns:
+            Path to discord_thread.yaml file
+        """
+        return self.get_sessions_dir(campaign_id) / session_id / "discord_thread.yaml"
