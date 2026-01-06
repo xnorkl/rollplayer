@@ -10,6 +10,9 @@ from .chat import APIResponse, ChatMessage, ErrorDetail, ResponseMeta
 from .player import Player
 from .membership import CampaignMembership
 from .session import Session, SessionParticipant
+from .discord_link import DiscordLink, GuildInfo
+from .discord_binding import DiscordBinding
+from .session_thread import SessionThread
 
 __all__ = [
     "ArtifactMetadata",
@@ -32,4 +35,8 @@ __all__ = [
     "CampaignMembership",
     "Session",
     "SessionParticipant",
+    "DiscordLink",
+    "GuildInfo",
+    "DiscordBinding",
+    "SessionThread",
 ]
