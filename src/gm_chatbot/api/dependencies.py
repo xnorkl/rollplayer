@@ -5,6 +5,9 @@ import os
 from ..artifacts.store import ArtifactStore
 from ..services.campaign_service import CampaignService
 from ..services.character_service import CharacterService
+from ..services.discord_binding_service import DiscordBindingService
+from ..services.discord_context_service import DiscordContextService
+from ..services.discord_linking_service import DiscordLinkingService
 from ..services.game_state_service import GameStateService
 from ..services.player_service import PlayerService
 from ..services.session_service import SessionService
@@ -19,6 +22,9 @@ _game_state_service: GameStateService | None = None
 _player_service: PlayerService | None = None
 _session_service: SessionService | None = None
 _dice_tool_registry: DiceToolRegistry | None = None
+_discord_linking_service: DiscordLinkingService | None = None
+_discord_binding_service: DiscordBindingService | None = None
+_discord_context_service: DiscordContextService | None = None
 
 
 def get_artifact_store() -> ArtifactStore:
@@ -81,10 +87,35 @@ def get_session_service() -> SessionService:
     return _session_service
 
 
+def get_discord_linking_service() -> DiscordLinkingService:
+    """Get Discord linking service instance."""
+    global _discord_linking_service
+    if _discord_linking_service is None:
+        _discord_linking_service = DiscordLinkingService(get_artifact_store())
+    return _discord_linking_service
+
+
+def get_discord_binding_service() -> DiscordBindingService:
+    """Get Discord binding service instance."""
+    global _discord_binding_service
+    if _discord_binding_service is None:
+        _discord_binding_service = DiscordBindingService(get_artifact_store())
+    return _discord_binding_service
+
+
+def get_discord_context_service() -> DiscordContextService:
+    """Get Discord context service instance."""
+    global _discord_context_service
+    if _discord_context_service is None:
+        _discord_context_service = DiscordContextService(get_artifact_store())
+    return _discord_context_service
+
+
 def reset_dependencies():
     """Reset all global dependencies (for testing only)."""
     global _store, _campaign_service, _character_service, _game_state_service
     global _player_service, _session_service, _dice_tool_registry
+    global _discord_linking_service, _discord_binding_service, _discord_context_service
     _store = None
     _campaign_service = None
     _character_service = None
@@ -92,3 +123,6 @@ def reset_dependencies():
     _player_service = None
     _session_service = None
     _dice_tool_registry = None
+    _discord_linking_service = None
+    _discord_binding_service = None
+    _discord_context_service = None

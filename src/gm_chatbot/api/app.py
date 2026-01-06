@@ -74,6 +74,7 @@ def create_app() -> FastAPI:
         health,
         players,
         sessions,
+        discord as discord_router,
     )
 
     app.include_router(health.router, tags=["Health"])
@@ -85,5 +86,6 @@ def create_app() -> FastAPI:
     app.include_router(rules.router, prefix="/api/v1", tags=["Rules"])
     app.include_router(players.router, prefix="/api/v1", tags=["Players"])
     app.include_router(sessions.router, prefix="/api/v1", tags=["Sessions"])
+    app.include_router(discord_router.router, prefix="/api/v1", tags=["Discord"])
 
     return app
