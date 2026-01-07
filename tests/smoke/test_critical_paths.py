@@ -41,7 +41,7 @@ class TestCampaignSmoke:
     async def test_create_campaign(self, smoke_services):
         """Can create campaign."""
         svc = smoke_services["campaign"]
-        campaign = await svc.create_campaign("Pytest Quest", "dnd5e")
+        campaign = await svc.create_campaign("Pytest Quest", "shadowdark")
 
         assert campaign.metadata.id
         assert campaign.status == "draft"
@@ -49,7 +49,9 @@ class TestCampaignSmoke:
     async def test_add_player_to_campaign(self, smoke_services):
         """Can add player to campaign."""
         player = await smoke_services["player"].create_player("joiner", "Joiner")
-        campaign = await smoke_services["campaign"].create_campaign("Joinable", "dnd5e")
+        campaign = await smoke_services["campaign"].create_campaign(
+            "Joinable", "shadowdark"
+        )
 
         membership = await smoke_services["campaign"].add_player(
             campaign.metadata.id,
@@ -59,6 +61,20 @@ class TestCampaignSmoke:
         assert membership.player_id == player.metadata.id
 
 
+class TestCharacterSmoke:
+    """Character service smoke tests."""
+
+    async def test_create_character(self, smoke_services):
+        """Can create character."""
+        character = await smoke_services["character"].create_character(
+            "Test Character", "shadowdark"
+        )
+
+        assert character.metadata.id
+        assert character.identity.name == "Test Character"
+        assert character.character_type == "player_character"
+
+
 class TestIntegrationSmoke:
     """Integration smoke tests."""
 
@@ -66,19 +82,31 @@ class TestIntegrationSmoke:
         """Complete game setup workflow."""
         # Setup
         gm = await smoke_services["player"].create_player("smoke_gm", "Smoke GM")
-        player = await smoke_services["player"].create_player("smoke_player", "Smoke Player")
-        campaign = await smoke_services["campaign"].create_campaign("Smoke Campaign", "dnd5e")
+        player = await smoke_services["player"].create_player(
+            "smoke_player", "Smoke Player"
+        )
+        campaign = await smoke_services["campaign"].create_campaign(
+            "Smoke Campaign", "dnd5e"
+        )
 
         # Add members
-        await smoke_services["campaign"].add_player(campaign.metadata.id, gm.metadata.id, role="gm")
-        await smoke_services["campaign"].add_player(campaign.metadata.id, player.metadata.id)
+        await smoke_services["campaign"].add_player(
+            campaign.metadata.id, gm.metadata.id, role="gm"
+        )
+        await smoke_services["campaign"].add_player(
+            campaign.metadata.id, player.metadata.id
+        )
 
         # Start session
-        session = await smoke_services["session"].create_session(campaign.metadata.id, gm.metadata.id)
+        session = await smoke_services["session"].create_session(
+            campaign.metadata.id, gm.metadata.id
+        )
 
         assert session.status == "active"
 
         # End session
-        ended = await smoke_services["session"].end_session(campaign.metadata.id, session.metadata.id)
+        ended = await smoke_services["session"].end_session(
+            campaign.metadata.id, session.metadata.id
+        )
 
         assert ended.status == "ended"

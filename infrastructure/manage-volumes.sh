@@ -1,12 +1,12 @@
 #!/bin/bash
 # Volume management script for Fly.io
-# Manages persistent volumes defined in volumes.toml
+# Manages persistent volumes defined in fly.toml
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-VOLUMES_CONFIG="${SCRIPT_DIR}/volumes.toml"
+VOLUMES_CONFIG="${SCRIPT_DIR}/fly.toml"
 DRY_RUN="${DRY_RUN:-false}"
 
 # Colors for output
@@ -46,12 +46,19 @@ get_toml_value() {
     awk -v section="$section" -v key="$key" '
         BEGIN { in_section=0 }
         /^\[volumes\./ { 
-            # Check if this section matches
-            match($0, /\[volumes\.([^]]+)\]/, arr)
-            if (arr[1] == section) {
-                in_section=1
-            } else {
-                in_section=0
+            # Check if this section matches by extracting section name
+            # Format: [volumes.section_name]
+            start = index($0, "[volumes.")
+            if (start == 1) {
+                end = index($0, "]")
+                if (end > 0) {
+                    section_name = substr($0, 10, end - 10)
+                    if (section_name == section) {
+                        in_section=1
+                    } else {
+                        in_section=0
+                    }
+                }
             }
         }
         in_section && $0 ~ "^[[:space:]]*" key "[[:space:]]*=" {
@@ -253,7 +260,7 @@ main() {
 Usage: $0 <command> [options]
 
 Commands:
-    ensure              Ensure all volumes from volumes.toml exist (idempotent)
+    ensure              Ensure all volumes from fly.toml exist (idempotent)
     list [app_name]    List all volumes for app (defaults to app from fly.toml)
     extend <name> <size_gb> [app_name]
                        Extend volume to new size

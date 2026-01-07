@@ -10,7 +10,7 @@ infrastructure/
 ├── .dockerignore       # Docker build exclusions
 ├── fly.toml            # Fly.io application configuration
 ├── fly.toml.example    # Example configuration template
-├── volumes.toml        # Volume configuration (Infrastructure as Code)
+├── fly.toml            # Fly.io application and volume configuration
 ├── manage-volumes.sh   # Volume management script
 └── README.md           # This file
 ```
@@ -148,6 +148,7 @@ flyctl info --app roll20-chatbot
 The application uses these environment variables (set via Fly.io secrets or `fly.toml`):
 
 **Application Configuration:**
+
 - `OPENAI_API_KEY` - OpenAI API key (required for AI features)
 - `LLM_MODEL` - LLM model name (default: `gpt-4o-mini`)
 - `WS_ADDRESS` - WebSocket bind address (default: `0.0.0.0` for Fly.io)
@@ -155,6 +156,7 @@ The application uses these environment variables (set via Fly.io secrets or `fly
 - `LOG_LEVEL` - Logging level (default: `INFO`)
 
 **Storage Configuration:**
+
 - `CAMPAIGNS_DIR` - Directory for campaign artifacts (default: `/data/campaigns`)
 - `RULES_DIR` - Directory for game rules YAML files (default: `/data/rules`)
 
@@ -292,11 +294,11 @@ If experiencing memory issues:
 
 ## Volume Management
 
-Volumes are managed as Infrastructure as Code using `infrastructure/volumes.toml` and the `manage-volumes.sh` script. This ensures volumes are automatically provisioned during deployment.
+Volumes are managed as Infrastructure as Code using the `[volumes]` section in `infrastructure/fly.toml` and the `manage-volumes.sh` script. This ensures volumes are automatically provisioned during deployment.
 
 ### Volume Configuration
 
-Volume specifications are defined in `infrastructure/volumes.toml`:
+Volume specifications are defined in the `[volumes]` section of `infrastructure/fly.toml`:
 
 ```toml
 [volumes.chatbot_data]
@@ -309,6 +311,7 @@ required = true  # If true, deployment fails if volume doesn't exist
 ```
 
 **Configuration Fields:**
+
 - `name` - Volume name (required)
 - `size_gb` - Volume size in GB (required)
 - `region` - Fly.io region code, must match `primary_region` in `fly.toml` (required)
@@ -321,12 +324,14 @@ required = true  # If true, deployment fails if volume doesn't exist
 The `infrastructure/manage-volumes.sh` script provides idempotent volume operations:
 
 **Ensure Volumes (Idempotent):**
+
 ```bash
-# Ensure all volumes from volumes.toml exist (creates if missing)
+# Ensure all volumes from fly.toml exist (creates if missing)
 ./infrastructure/manage-volumes.sh ensure
 ```
 
 **List Volumes:**
+
 ```bash
 # List all volumes for app (auto-detects app from fly.toml)
 ./infrastructure/manage-volumes.sh list
@@ -336,12 +341,14 @@ The `infrastructure/manage-volumes.sh` script provides idempotent volume operati
 ```
 
 **Extend Volume:**
+
 ```bash
 # Extend volume to new size
 ./infrastructure/manage-volumes.sh extend chatbot_data 20
 ```
 
 **Dry Run:**
+
 ```bash
 # Test volume operations without making changes
 DRY_RUN=true ./infrastructure/manage-volumes.sh ensure
@@ -381,6 +388,7 @@ flyctl volumes destroy chatbot_data --app gm-chatbot
 ### Volume Storage Structure
 
 The application uses a persistent volume mounted at `/data` to store:
+
 - Campaign artifacts (`/data/campaigns/`)
 - Game rules (`/data/rules/`)
 
@@ -409,6 +417,7 @@ flyctl apps restart gm-chatbot
 Players can export and import their character sheets via the API:
 
 **Export Character:**
+
 ```bash
 # Get character sheet as YAML
 curl -X GET \
@@ -418,6 +427,7 @@ curl -X GET \
 ```
 
 **Import Character:**
+
 ```bash
 # Import character sheet from YAML
 curl -X POST \
@@ -427,6 +437,7 @@ curl -X POST \
 ```
 
 **Use Cases:**
+
 - Backup character sheets
 - Share characters between campaigns
 - Import characters from external tools
@@ -437,24 +448,28 @@ curl -X POST \
 ### Volume Issues
 
 **Volume Not Found During Deployment:**
-- Check that `volumes.toml` exists and is properly formatted
+
+- Check that `fly.toml` exists and is properly formatted with `[volumes]` sections
 - Verify volume configuration matches `fly.toml` (app name, region)
 - Check Fly.io API token has proper permissions
 - Review GitHub Actions logs for volume creation errors
 
 **Volume Creation Fails:**
+
 - Verify app exists: `flyctl apps list`
 - Check region is valid: `flyctl regions list`
 - Ensure sufficient Fly.io quota for volume creation
 - Check volume name doesn't conflict with existing volumes
 
 **Volume Mount Issues:**
+
 - Verify volume exists: `flyctl volumes list --app gm-chatbot`
 - Check volume is in same region as app
 - Verify `fly.toml` has correct mount configuration
 - Restart app after volume creation: `flyctl apps restart gm-chatbot`
 
 **Script Execution Issues:**
+
 - Ensure script is executable: `chmod +x infrastructure/manage-volumes.sh`
 - Verify `jq` is installed (required for JSON parsing)
 - Check TOML file syntax is valid
