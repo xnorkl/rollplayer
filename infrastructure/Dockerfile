@@ -1,5 +1,5 @@
-# Use UV base image for faster builds
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
+# Use UV base image with Python 3.12
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 WORKDIR /app
 
@@ -7,16 +7,8 @@ WORKDIR /app
 COPY pyproject.toml ./
 COPY uv.lock* ./
 
-# Install dependencies (skip project installation - it's available via PYTHONPATH)
+# Install dependencies directly in runtime stage (ensures Python interpreter compatibility)
 RUN uv sync --frozen --no-dev --no-install-project
-
-# Runtime stage
-FROM python:3.12-slim
-
-WORKDIR /app
-
-# Copy virtual environment from builder
-COPY --from=builder /app/.venv /app/.venv
 
 # Copy application code
 COPY src/ ./src/
