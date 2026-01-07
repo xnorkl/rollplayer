@@ -8,7 +8,7 @@ from .gm_service import GMService
 __all__ = [
     "CampaignService",
     "CharacterService",
-    "GameStateService",
-    "GameStateManager",
     "GMService",
+    "GameStateManager",
+    "GameStateService",
 ]

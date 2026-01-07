@@ -4,10 +4,10 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from ..models.action import GameAction
 from ..models.base import BaseArtifact
 from ..models.campaign import Campaign
 from ..models.character import CharacterSheet
-from ..models.action import GameAction
 
 
 class ArtifactValidator:
@@ -23,10 +23,7 @@ class ArtifactValidator:
         try:
             return CharacterSheet.model_validate(data)
         except ValidationError as e:
-            raise ValidationError(
-                f"Invalid character sheet: {e.errors()}",
-                model=CharacterSheet,
-            ) from e
+            raise ValidationError(f"Invalid character sheet: {e.errors()}") from e
 
     def validate_campaign(self, data: dict[str, Any]) -> Campaign:
         """
@@ -38,10 +35,7 @@ class ArtifactValidator:
         try:
             return Campaign.model_validate(data)
         except ValidationError as e:
-            raise ValidationError(
-                f"Invalid campaign: {e.errors()}",
-                model=Campaign,
-            ) from e
+            raise ValidationError(f"Invalid campaign: {e.errors()}") from e
 
     def validate_action(self, data: dict[str, Any]) -> GameAction:
         """
@@ -53,10 +47,7 @@ class ArtifactValidator:
         try:
             return GameAction.model_validate(data)
         except ValidationError as e:
-            raise ValidationError(
-                f"Invalid game action: {e.errors()}",
-                model=GameAction,
-            ) from e
+            raise ValidationError(f"Invalid game action: {e.errors()}") from e
 
     def validate_artifact(self, artifact: BaseArtifact) -> bool:
         """
@@ -72,7 +63,4 @@ class ArtifactValidator:
             artifact.model_validate(artifact.model_dump())
             return True
         except ValidationError as e:
-            raise ValidationError(
-                f"Invalid artifact: {e.errors()}",
-                model=type(artifact),
-            ) from e
+            raise ValidationError(f"Invalid artifact: {e.errors()}") from e

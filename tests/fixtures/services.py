@@ -6,7 +6,6 @@ from gm_chatbot.services.campaign_service import CampaignService
 from gm_chatbot.services.character_service import CharacterService
 from gm_chatbot.services.player_service import PlayerService
 from gm_chatbot.services.session_service import SessionService
-from tests.fixtures.store import artifact_store
 
 
 @pytest.fixture

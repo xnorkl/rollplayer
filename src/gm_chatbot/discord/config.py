@@ -2,7 +2,6 @@
 
 import os
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
@@ -10,7 +9,7 @@ class DiscordConfig:
     """Configuration for Discord bot."""
 
     bot_token: str
-    api_base_url: Optional[str] = None
+    api_base_url: str | None = None
     rate_limit_commands_per_user: tuple[int, int] = (20, 60)  # 20 commands per 60 seconds
     rate_limit_messages_per_channel: tuple[int, int] = (
         30,

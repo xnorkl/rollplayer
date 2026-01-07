@@ -37,7 +37,7 @@ async def send_message(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to process message: {str(e)}",
+            f"Failed to process message: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -61,7 +61,7 @@ async def get_chat_history(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to get chat history: {str(e)}",
+            f"Failed to get chat history: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 

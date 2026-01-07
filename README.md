@@ -76,6 +76,63 @@ export ANTHROPIC_API_KEY="your-key"
 
 ## Development
 
+This project uses [`just`](https://github.com/casey/just) as a task runner for standardized local development. Install it with:
+
+```bash
+# macOS
+brew install just
+
+# Or via cargo
+cargo install just
+```
+
+### Common Tasks
+
+```bash
+# Run all tests
+just test
+
+# Run unit tests only
+just test-unit
+
+# Run integration tests only
+just test-integration
+
+# Run tests with coverage
+just test-cov
+
+# Run linting
+just lint
+
+# Auto-fix linting issues
+just lint-fix
+
+# Format code
+just format
+
+# Run type checking
+just typecheck
+
+# Run all quality checks (format, lint, typecheck, test)
+just check
+
+# Start development server
+just dev
+
+# Start development server with debug logging
+just dev-debug
+
+# Clean build artifacts
+just clean
+
+# Show all available commands
+just --list
+```
+
+### Manual Commands
+
+If you don't have `just` installed, you can use these commands directly:
+
 ```bash
 # Install dev dependencies
 uv sync --dev

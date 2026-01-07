@@ -1,14 +1,12 @@
 """Player router."""
 
-from typing import Optional
-
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import Response
 
 from ...api.dependencies import get_player_service
 from ...api.exceptions import APIError, ErrorCodes
-from ...models.player import Player
 from ...models.chat import APIResponse
+from ...models.player import Player
 from ...services.player_service import PlayerService
 
 router = APIRouter()
@@ -28,19 +26,17 @@ async def list_players(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to list players: {str(e)}",
+            f"Failed to list players: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
 
-@router.post(
-    "/players", response_model=APIResponse[Player], status_code=status.HTTP_201_CREATED
-)
+@router.post("/players", response_model=APIResponse[Player], status_code=status.HTTP_201_CREATED)
 async def create_player(
     username: str,
     display_name: str,
-    email: Optional[str] = None,
-    avatar_url: Optional[str] = None,
+    email: str | None = None,
+    avatar_url: str | None = None,
     player_status: str = "offline",
     service: PlayerService = Depends(get_player_service),
 ):
@@ -63,13 +59,13 @@ async def create_player(
             ) from e
         raise APIError(
             ErrorCodes.VALIDATION_ERROR,
-            f"Failed to create player: {str(e)}",
+            f"Failed to create player: {e!s}",
             status_code=status.HTTP_400_BAD_REQUEST,
         ) from e
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to create player: {str(e)}",
+            f"Failed to create player: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -92,7 +88,7 @@ async def get_player(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to get player: {str(e)}",
+            f"Failed to get player: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -124,13 +120,13 @@ async def update_player(
             ) from e
         raise APIError(
             ErrorCodes.VALIDATION_ERROR,
-            f"Failed to update player: {str(e)}",
+            f"Failed to update player: {e!s}",
             status_code=status.HTTP_400_BAD_REQUEST,
         ) from e
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to update player: {str(e)}",
+            f"Failed to update player: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -158,13 +154,13 @@ async def delete_player(
             ) from e
         raise APIError(
             ErrorCodes.VALIDATION_ERROR,
-            f"Failed to delete player: {str(e)}",
+            f"Failed to delete player: {e!s}",
             status_code=status.HTTP_400_BAD_REQUEST,
         ) from e
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to delete player: {str(e)}",
+            f"Failed to delete player: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -187,7 +183,7 @@ async def get_player_campaigns(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to get player campaigns: {str(e)}",
+            f"Failed to get player campaigns: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -221,6 +217,6 @@ async def get_player_active_session(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to get player active session: {str(e)}",
+            f"Failed to get player active session: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e

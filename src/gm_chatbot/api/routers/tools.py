@@ -25,13 +25,13 @@ async def roll_dice(
     except ValueError as e:
         raise APIError(
             ErrorCodes.DICE_EXPRESSION_INVALID,
-            f"Invalid dice expression: {str(e)}",
+            f"Invalid dice expression: {e!s}",
             status_code=status.HTTP_400_BAD_REQUEST,
         ) from e
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to roll dice: {str(e)}",
+            f"Failed to roll dice: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -50,12 +50,12 @@ async def evaluate_expression(
     except ValueError as e:
         raise APIError(
             ErrorCodes.DICE_EXPRESSION_INVALID,
-            f"Invalid expression: {str(e)}",
+            f"Invalid expression: {e!s}",
             status_code=status.HTTP_400_BAD_REQUEST,
         ) from e
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to evaluate expression: {str(e)}",
+            f"Failed to evaluate expression: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e

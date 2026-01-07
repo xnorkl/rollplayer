@@ -1,11 +1,11 @@
 """Discord link model for linking Discord users to players."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
 
-from .base import ArtifactMetadata, BaseArtifact
+from .base import BaseArtifact
 
 
 class GuildInfo(BaseModel):
@@ -13,7 +13,7 @@ class GuildInfo(BaseModel):
 
     guild_id: str = Field(..., min_length=1)
     guild_name: str = Field(..., min_length=1)
-    joined_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    joined_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class DiscordLink(BaseArtifact):
@@ -22,12 +22,12 @@ class DiscordLink(BaseArtifact):
     player_id: str = Field(..., min_length=1)
     discord_user_id: str = Field(..., min_length=1)  # Discord snowflake
     discord_username: str = Field(..., min_length=1)
-    linked_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    linked_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     guilds: list[GuildInfo] = Field(default_factory=list)  # List of guild info
 
     def model_post_init(self, __context: Any) -> None:
         """Update metadata after initialization."""
         if not self.metadata.created_at:
-            self.metadata.created_at = datetime.now(timezone.utc)
+            self.metadata.created_at = datetime.now(UTC)
         if not self.metadata.updated_at:
-            self.metadata.updated_at = datetime.now(timezone.utc)
+            self.metadata.updated_at = datetime.now(UTC)

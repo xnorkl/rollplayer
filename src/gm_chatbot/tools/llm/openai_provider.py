@@ -1,11 +1,8 @@
 """OpenAI LLM provider."""
 
 import os
-from typing import Optional
 
 from openai import AsyncOpenAI
-
-from .interface import LLMProvider
 
 
 class OpenAIProvider:
@@ -13,7 +10,7 @@ class OpenAIProvider:
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         model: str = "gpt-4o-mini",
     ):
         """
@@ -25,7 +22,7 @@ class OpenAIProvider:
         """
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self.model = model
-        self.client: Optional[AsyncOpenAI] = None
+        self.client: AsyncOpenAI | None = None
         if self.api_key:
             self.client = AsyncOpenAI(api_key=self.api_key)
 
@@ -63,4 +60,3 @@ class OpenAIProvider:
     async def is_available(self) -> bool:
         """Check if OpenAI is available."""
         return self.client is not None
-

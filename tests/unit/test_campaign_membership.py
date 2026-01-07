@@ -4,7 +4,6 @@ import pytest
 
 from gm_chatbot.services.campaign_service import CampaignService
 from gm_chatbot.services.player_service import PlayerService
-from tests.fixtures.store import artifact_store
 
 
 @pytest.mark.asyncio

@@ -1,9 +1,7 @@
 """Tool registry for managing external tools."""
 
-from typing import Optional
-
-from .dice.interface import DiceToolInterface
 from .dice.cli_tool import CLIDiceTool
+from .dice.interface import DiceToolInterface
 
 
 class ToolRegistry:
@@ -12,7 +10,7 @@ class ToolRegistry:
     def __init__(self):
         """Initialize tool registry."""
         self._dice_tools: dict[str, DiceToolInterface] = {}
-        self._default_dice_tool: Optional[str] = None
+        self._default_dice_tool: str | None = None
 
     def register_dice_tool(self, name: str, tool: DiceToolInterface, default: bool = False) -> None:
         """
@@ -27,7 +25,7 @@ class ToolRegistry:
         if default or self._default_dice_tool is None:
             self._default_dice_tool = name
 
-    def get_dice_tool(self, name: Optional[str] = None) -> DiceToolInterface:
+    def get_dice_tool(self, name: str | None = None) -> DiceToolInterface:
         """
         Get a dice tool by name.
 

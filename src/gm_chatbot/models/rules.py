@@ -1,7 +1,5 @@
 """Game rules models."""
 
-from typing import Literal, Optional
-
 from pydantic import BaseModel, Field
 
 
@@ -10,7 +8,7 @@ class RuleMetadata(BaseModel):
 
     system_name: str
     version: str
-    author: Optional[str] = None
+    author: str | None = None
 
 
 class AbilityDefinition(BaseModel):

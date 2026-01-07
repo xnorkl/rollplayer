@@ -2,10 +2,9 @@
 
 import os
 from pathlib import Path
-from typing import Optional
 
-from .loader import RuleLoader
 from ..models.rules import AbilityDefinition, RuleSet
+from .loader import RuleLoader
 
 
 class RulesEngine:
@@ -21,9 +20,9 @@ class RulesEngine:
         if rules_dir is None:
             rules_dir = os.getenv("RULES_DIR", "/data/rules")
         self.loader = RuleLoader(rules_dir)
-        self._current_ruleset: Optional[RuleSet] = None
+        self._current_ruleset: RuleSet | None = None
 
-    def load_system(self, system: str, version: Optional[str] = None) -> RuleSet:
+    def load_system(self, system: str, version: str | None = None) -> RuleSet:
         """
         Load a game system's rules.
 
@@ -37,7 +36,7 @@ class RulesEngine:
         self._current_ruleset = self.loader.load_rules(system, version)
         return self._current_ruleset
 
-    def get_ability_definition(self, ability_name: str) -> Optional[AbilityDefinition]:
+    def get_ability_definition(self, ability_name: str) -> AbilityDefinition | None:
         """
         Get ability definition by name.
 
@@ -78,7 +77,7 @@ class RulesEngine:
                 return mapping.modifier
         return 0
 
-    def get_difficulty_class(self, difficulty: str) -> Optional[int]:
+    def get_difficulty_class(self, difficulty: str) -> int | None:
         """
         Get difficulty class value.
 
@@ -92,7 +91,7 @@ class RulesEngine:
             return None
         return self._current_ruleset.difficulty_classes.get(difficulty.lower())
 
-    def get_dice_expression(self, expression_name: str) -> Optional[str]:
+    def get_dice_expression(self, expression_name: str) -> str | None:
         """
         Get dice expression template.
 

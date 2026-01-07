@@ -2,4 +2,4 @@
 
 from .registry import DiceToolRegistry, ToolRegistry
 
-__all__ = ["ToolRegistry", "DiceToolRegistry"]
+__all__ = ["DiceToolRegistry", "ToolRegistry"]

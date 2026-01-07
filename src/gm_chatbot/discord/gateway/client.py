@@ -1,13 +1,10 @@
 """Discord gateway client wrapper."""
 
 import logging
-from typing import Optional
 
-from discord.ext import commands
-
+from ...artifacts.store import ArtifactStore
 from ..bot import DiscordBot
 from ..config import DiscordConfig
-from ...artifacts.store import ArtifactStore
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +15,7 @@ class DiscordGatewayClient:
     def __init__(
         self,
         config: DiscordConfig,
-        store: Optional[ArtifactStore] = None,
+        store: ArtifactStore | None = None,
     ):
         """
         Initialize gateway client.
@@ -29,7 +26,7 @@ class DiscordGatewayClient:
         """
         self.config = config
         self.store = store
-        self.bot: Optional[DiscordBot] = None
+        self.bot: DiscordBot | None = None
 
     async def connect(self) -> None:
         """Establish connection to Discord."""

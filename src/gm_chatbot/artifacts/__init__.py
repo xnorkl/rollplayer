@@ -3,4 +3,4 @@
 from .store import ArtifactStore
 from .validator import ArtifactValidator
 
-__all__ = ["ArtifactValidator", "ArtifactStore"]
+__all__ = ["ArtifactStore", "ArtifactValidator"]

@@ -1,18 +1,11 @@
 """Campaign commands for Discord bot."""
 
 import logging
-from typing import Optional
 
 import discord
 from discord import app_commands
-from discord.ext import commands
 
-from ...services.campaign_service import CampaignService
-from ...services.discord_binding_service import DiscordBindingService
-from ...services.discord_context_service import DiscordContextService
-from ...services.discord_linking_service import DiscordLinkingService
 from ..bot import DiscordBot
-from .base import BaseCommand
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +32,7 @@ def setup_campaign_commands(bot: DiscordBot) -> None:
         interaction: discord.Interaction,
         name: str,
         system: str,
-        description: Optional[str] = None,
+        description: str | None = None,
     ) -> None:
         """Create a new campaign."""
         await interaction.response.defer(ephemeral=True)
@@ -73,9 +66,7 @@ def setup_campaign_commands(bot: DiscordBot) -> None:
                 description=f"Campaign **{campaign.name}** has been created.",
                 color=discord.Color.green(),
             )
-            embed.add_field(
-                name="Campaign ID", value=campaign.metadata.id, inline=False
-            )
+            embed.add_field(name="Campaign ID", value=campaign.metadata.id, inline=False)
             embed.add_field(name="System", value=campaign.rule_system, inline=True)
             embed.add_field(name="Status", value=campaign.status, inline=True)
 
@@ -84,7 +75,7 @@ def setup_campaign_commands(bot: DiscordBot) -> None:
             logger.error(f"Error in create_campaign: {e}", exc_info=True)
             embed = discord.Embed(
                 title="Error",
-                description=f"An error occurred: {str(e)}",
+                description=f"An error occurred: {e!s}",
                 color=discord.Color.red(),
             )
             await interaction.followup.send(embed=embed, ephemeral=True)
@@ -124,9 +115,7 @@ def setup_campaign_commands(bot: DiscordBot) -> None:
 
             for binding in bindings[:10]:  # Limit to 10 campaigns
                 try:
-                    campaign = await bot.campaign_service.get_campaign(
-                        binding.campaign_id
-                    )
+                    campaign = await bot.campaign_service.get_campaign(binding.campaign_id)
                     embed.add_field(
                         name=campaign.name,
                         value=f"ID: {campaign.metadata.id}\nChannel: <#{binding.channel_id}>",
@@ -143,7 +132,7 @@ def setup_campaign_commands(bot: DiscordBot) -> None:
             logger.error(f"Error in list_campaigns: {e}", exc_info=True)
             embed = discord.Embed(
                 title="Error",
-                description=f"An error occurred: {str(e)}",
+                description=f"An error occurred: {e!s}",
                 color=discord.Color.red(),
             )
             await interaction.followup.send(embed=embed, ephemeral=True)
@@ -154,7 +143,7 @@ def setup_campaign_commands(bot: DiscordBot) -> None:
     )
     async def campaign_info(
         interaction: discord.Interaction,
-        campaign_id: Optional[str] = None,
+        campaign_id: str | None = None,
     ) -> None:
         """Show campaign details."""
         await interaction.response.defer(ephemeral=True)
@@ -172,9 +161,7 @@ def setup_campaign_commands(bot: DiscordBot) -> None:
                     return
 
                 channel_id = str(interaction.channel.id)
-                campaign_id = await bot.binding_service.get_campaign_by_channel(
-                    channel_id
-                )
+                campaign_id = await bot.binding_service.get_campaign_by_channel(channel_id)
                 if not campaign_id:
                     embed = discord.Embed(
                         title="Error",
@@ -194,9 +181,7 @@ def setup_campaign_commands(bot: DiscordBot) -> None:
                 description=campaign.description or "No description",
                 color=discord.Color.blue(),
             )
-            embed.add_field(
-                name="Campaign ID", value=campaign.metadata.id, inline=False
-            )
+            embed.add_field(name="Campaign ID", value=campaign.metadata.id, inline=False)
             embed.add_field(name="System", value=campaign.rule_system, inline=True)
             embed.add_field(name="Status", value=campaign.status, inline=True)
 
@@ -219,7 +204,7 @@ def setup_campaign_commands(bot: DiscordBot) -> None:
             logger.error(f"Error in campaign_info: {e}", exc_info=True)
             embed = discord.Embed(
                 title="Error",
-                description=f"An error occurred: {str(e)}",
+                description=f"An error occurred: {e!s}",
                 color=discord.Color.red(),
             )
             await interaction.followup.send(embed=embed, ephemeral=True)
@@ -275,11 +260,12 @@ def setup_campaign_commands(bot: DiscordBot) -> None:
                 return
 
             # Create binding
+            channel_name = interaction.channel.name if interaction.channel.name else "Unknown"
             binding = await bot.binding_service.bind_campaign_to_channel(
                 campaign_id=campaign_id,
                 guild_id=str(interaction.guild.id),
                 channel_id=str(interaction.channel.id),
-                channel_name=interaction.channel.name,
+                channel_name=channel_name,
                 bound_by=player.metadata.id,
             )
 
@@ -294,7 +280,7 @@ def setup_campaign_commands(bot: DiscordBot) -> None:
             logger.error(f"Error in set_channel: {e}", exc_info=True)
             embed = discord.Embed(
                 title="Error",
-                description=f"An error occurred: {str(e)}",
+                description=f"An error occurred: {e!s}",
                 color=discord.Color.red(),
             )
             await interaction.followup.send(embed=embed, ephemeral=True)
@@ -323,8 +309,10 @@ def setup_campaign_commands(bot: DiscordBot) -> None:
                 await interaction.followup.send(embed=embed, ephemeral=True)
                 return
 
+            from ...lib.types import CampaignStatus
+
             campaign = await bot.campaign_service.get_campaign(campaign_id)
-            campaign.status = "archived"
+            campaign.status = CampaignStatus.ARCHIVED
             await bot.campaign_service.update_campaign(campaign)
 
             embed = discord.Embed(
@@ -345,7 +333,7 @@ def setup_campaign_commands(bot: DiscordBot) -> None:
             logger.error(f"Error in archive_campaign: {e}", exc_info=True)
             embed = discord.Embed(
                 title="Error",
-                description=f"An error occurred: {str(e)}",
+                description=f"An error occurred: {e!s}",
                 color=discord.Color.red(),
             )
             await interaction.followup.send(embed=embed, ephemeral=True)
@@ -403,7 +391,7 @@ def setup_campaign_commands(bot: DiscordBot) -> None:
             logger.error(f"Error in delete_campaign: {e}", exc_info=True)
             embed = discord.Embed(
                 title="Error",
-                description=f"An error occurred: {str(e)}",
+                description=f"An error occurred: {e!s}",
                 color=discord.Color.red(),
             )
             await interaction.followup.send(embed=embed, ephemeral=True)

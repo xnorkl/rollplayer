@@ -1,9 +1,10 @@
 """Dice rolling models."""
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field
+
+from ..lib.datetime import utc_now
 
 
 class DiceResult(BaseModel):
@@ -14,5 +15,5 @@ class DiceResult(BaseModel):
     rolls: list[int] = Field(default_factory=list)  # Individual die rolls
     modifier: int = Field(default=0)  # Applied modifier
     breakdown: str = ""  # Human-readable breakdown
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-    seed: Optional[str] = None  # For reproducibility
+    timestamp: datetime = Field(default_factory=utc_now)
+    seed: str | None = None  # For reproducibility

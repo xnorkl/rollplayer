@@ -1,9 +1,7 @@
 """Discord binding service for managing campaign to channel bindings."""
 
 import fcntl
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Optional
+from datetime import UTC, datetime
 
 from ..artifacts.store import ArtifactStore
 from ..models.discord_binding import DiscordBinding
@@ -12,7 +10,7 @@ from ..models.discord_binding import DiscordBinding
 class DiscordBindingService:
     """Service for managing Discord campaign to channel bindings."""
 
-    def __init__(self, store: Optional[ArtifactStore] = None):
+    def __init__(self, store: ArtifactStore | None = None):
         """
         Initialize Discord binding service.
 
@@ -28,7 +26,7 @@ class DiscordBindingService:
         channel_id: str,
         channel_name: str,
         bound_by: str,
-        settings: Optional[dict] = None,
+        settings: dict | None = None,
     ) -> DiscordBinding:
         """
         Bind a campaign to a Discord channel.
@@ -62,7 +60,7 @@ class DiscordBindingService:
             existing.channel_id = channel_id
             existing.channel_name = channel_name
             existing.bound_by = bound_by
-            existing.metadata.updated_at = datetime.now(timezone.utc)
+            existing.metadata.updated_at = datetime.now(UTC)
             if settings is not None:
                 existing.settings.update(settings)
 
@@ -75,7 +73,7 @@ class DiscordBindingService:
             guild_id=guild_id,
             channel_id=channel_id,
             channel_name=channel_name,
-            bound_at=datetime.now(timezone.utc),
+            bound_at=datetime.now(UTC),
             bound_by=bound_by,
         )
         if settings is not None:
@@ -86,7 +84,7 @@ class DiscordBindingService:
         await self._save_binding(binding)
         return binding
 
-    async def get_campaign_by_channel(self, channel_id: str) -> Optional[str]:
+    async def get_campaign_by_channel(self, channel_id: str) -> str | None:
         """
         Get campaign ID bound to a Discord channel.
 
@@ -99,7 +97,7 @@ class DiscordBindingService:
         binding = await self.get_binding_by_channel(channel_id)
         return binding.campaign_id if binding else None
 
-    async def get_binding(self, campaign_id: str) -> Optional[DiscordBinding]:
+    async def get_binding(self, campaign_id: str) -> DiscordBinding | None:
         """
         Get Discord binding for a campaign.
 
@@ -121,11 +119,11 @@ class DiscordBindingService:
                 finally:
                     fcntl.flock(f.fileno(), fcntl.LOCK_UN)
 
-            return DiscordBinding.from_yaml(content)
+            return DiscordBinding.from_yaml(content)  # type: ignore[return-value]
         except Exception:
             return None
 
-    async def get_binding_by_channel(self, channel_id: str) -> Optional[DiscordBinding]:
+    async def get_binding_by_channel(self, channel_id: str) -> DiscordBinding | None:
         """
         Get Discord binding by channel ID.
 
@@ -171,9 +169,7 @@ class DiscordBindingService:
         """
         binding_path = self.store.get_discord_binding_path(campaign_id)
         if not binding_path.exists():
-            raise FileNotFoundError(
-                f"Discord binding not found for campaign {campaign_id}"
-            )
+            raise FileNotFoundError(f"Discord binding not found for campaign {campaign_id}")
 
         binding_path.unlink()
 

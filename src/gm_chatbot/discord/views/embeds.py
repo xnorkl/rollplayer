@@ -64,7 +64,11 @@ def build_session_status_embed(session: Session) -> discord.Embed:
         color=discord.Color.purple(),
     )
     embed.add_field(name="Status", value=session.status, inline=True)
-    embed.add_field(name="Started", value=session.started_at.isoformat() if session.started_at else "Unknown", inline=True)
+    embed.add_field(
+        name="Started",
+        value=session.started_at.isoformat() if session.started_at else "Unknown",
+        inline=True,
+    )
     return embed
 
 

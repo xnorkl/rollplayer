@@ -1,9 +1,10 @@
 """Character sheet model."""
 
-from typing import Literal, Optional
+from typing import Annotated
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, BeforeValidator, Field
 
+from ..lib.types import CharacterType
 from .base import BaseArtifact
 
 
@@ -11,11 +12,11 @@ class CharacterIdentity(BaseModel):
     """Character identity information."""
 
     name: str = Field(..., min_length=1)
-    player_name: Optional[str] = None  # None for NPCs
-    ancestry: Optional[str] = None
-    class_name: Optional[str] = Field(None, alias="class")
+    player_name: str | None = None  # None for NPCs
+    ancestry: str | None = None
+    class_name: str | None = Field(None, alias="class")
     level: int = Field(default=1, ge=1, le=20)
-    alignment: Optional[str] = None
+    alignment: str | None = None
 
 
 class HitPoints(BaseModel):
@@ -41,10 +42,17 @@ class InventoryItem(BaseModel):
     equipped: bool = Field(default=False)
 
 
+def _validate_character_type(v: CharacterType | str) -> CharacterType:
+    """Convert string to CharacterType enum."""
+    if isinstance(v, str):
+        return CharacterType(v)
+    return v
+
+
 class CharacterSheet(BaseArtifact):
     """Character sheet artifact (PC or NPC)."""
 
-    character_type: Literal["player_character", "non_player_character"] = Field(
+    character_type: Annotated[CharacterType, BeforeValidator(_validate_character_type)] = Field(
         ..., alias="type"
     )
     identity: CharacterIdentity
@@ -52,7 +60,7 @@ class CharacterSheet(BaseArtifact):
     combat: CombatStats = Field(default_factory=CombatStats)
     inventory: list[InventoryItem] = Field(default_factory=list)
     conditions: list[str] = Field(default_factory=list)
-    notes: Optional[str] = None
+    notes: str | None = None
 
     model_config = BaseArtifact.model_config.copy()
     model_config["populate_by_name"] = True

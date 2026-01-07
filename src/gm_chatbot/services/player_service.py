@@ -1,19 +1,18 @@
 """Player service for player management."""
 
-from datetime import datetime
-from pathlib import Path
-from typing import Optional
 from uuid import uuid4
 
 from ..artifacts.store import ArtifactStore
 from ..artifacts.validator import ArtifactValidator
+from ..lib.datetime import utc_now
+from ..lib.types import PlayerStatus
 from ..models.player import Player
 
 
 class PlayerService:
     """Service for managing players."""
 
-    def __init__(self, store: Optional[ArtifactStore] = None):
+    def __init__(self, store: ArtifactStore | None = None):
         """
         Initialize player service.
 
@@ -27,9 +26,9 @@ class PlayerService:
         self,
         username: str,
         display_name: str,
-        email: Optional[str] = None,
-        avatar_url: Optional[str] = None,
-        status: str = "offline",
+        email: str | None = None,
+        avatar_url: str | None = None,
+        status: PlayerStatus | str = PlayerStatus.OFFLINE,
     ) -> Player:
         """
         Create a new player.
@@ -52,6 +51,10 @@ class PlayerService:
             raise ValueError(f"Username '{username}' already exists")
 
         player_id = str(uuid4())
+        # Convert string to enum if needed (for backward compatibility)
+        if isinstance(status, str):
+            status = PlayerStatus(status)
+
         player = Player(
             username=username,
             display_name=display_name,
@@ -68,7 +71,6 @@ class PlayerService:
         # Save player.yaml (use campaign_id as player_id for save_artifact compatibility)
         # We'll need to save directly since players are not in campaigns
         import fcntl
-        from pathlib import Path
 
         file_path = player_dir / "player.yaml"
         temp_path = file_path.with_suffix(".tmp")
@@ -100,7 +102,6 @@ class PlayerService:
             FileNotFoundError: If player not found
         """
         import fcntl
-        from pathlib import Path
 
         player_dir = self.store.get_player_dir(player_id)
         file_path = player_dir / "player.yaml"
@@ -114,9 +115,9 @@ class PlayerService:
             finally:
                 fcntl.flock(f.fileno(), fcntl.LOCK_UN)
 
-        return Player.from_yaml(content)
+        return Player.from_yaml(content)  # type: ignore[return-value]
 
-    async def get_player_by_username(self, username: str) -> Optional[Player]:
+    async def get_player_by_username(self, username: str) -> Player | None:
         """
         Get a player by username.
 
@@ -156,16 +157,16 @@ class PlayerService:
         """
         # If username changed, check uniqueness
         existing = await self.get_player(player.metadata.id)
-        if existing.username != player.username:
-            if not await self.check_username_unique(player.username):
-                raise ValueError(f"Username '{player.username}' already exists")
+        if existing.username != player.username and not await self.check_username_unique(
+            player.username
+        ):
+            raise ValueError(f"Username '{player.username}' already exists")
 
         # Update timestamp
-        player.metadata.updated_at = datetime.utcnow()
+        player.metadata.updated_at = utc_now()
 
         # Save directly (players are not in campaigns)
         import fcntl
-        from pathlib import Path
 
         player_dir = self.store.get_player_dir(player.metadata.id)
         file_path = player_dir / "player.yaml"
@@ -231,7 +232,7 @@ class PlayerService:
         return players
 
     async def check_username_unique(
-        self, username: str, exclude_player_id: Optional[str] = None
+        self, username: str, exclude_player_id: str | None = None
     ) -> bool:
         """
         Check if username is unique.
@@ -260,8 +261,8 @@ class PlayerService:
         Returns:
             List of membership dictionaries with campaign and role info
         """
-        from ..models.membership import CampaignMembership
         from ..models.campaign import Campaign
+        from ..models.membership import CampaignMembership
 
         memberships = []
         if not self.store.campaigns_dir.exists():

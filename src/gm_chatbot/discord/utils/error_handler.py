@@ -1,7 +1,6 @@
 """Error handling for Discord commands."""
 
 import logging
-import traceback
 
 import discord
 
@@ -26,7 +25,7 @@ async def handle_command_error(
     # Create error embed
     embed = discord.Embed(
         title="Error",
-        description=f"An error occurred: {str(error)}",
+        description=f"An error occurred: {error!s}",
         color=discord.Color.red(),
     )
 
