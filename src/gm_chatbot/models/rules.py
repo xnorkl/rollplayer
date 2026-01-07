@@ -37,7 +37,9 @@ class RuleSet(BaseModel):
 
     metadata: RuleMetadata
     abilities: list[AbilityDefinition] = Field(default_factory=list)
-    ability_modifiers: AbilityModifierConfig = Field(default_factory=AbilityModifierConfig)
+    ability_modifiers: AbilityModifierConfig = Field(
+        default_factory=AbilityModifierConfig
+    )
     difficulty_classes: dict[str, int] = Field(default_factory=dict)
     dice_expressions: dict[str, str] = Field(default_factory=dict)
     conditions: list[dict[str, list[str]]] = Field(default_factory=list)

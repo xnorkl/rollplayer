@@ -52,9 +52,9 @@ def _validate_character_type(v: CharacterType | str) -> CharacterType:
 class CharacterSheet(BaseArtifact):
     """Character sheet artifact (PC or NPC)."""
 
-    character_type: Annotated[CharacterType, BeforeValidator(_validate_character_type)] = Field(
-        ..., alias="type"
-    )
+    character_type: Annotated[
+        CharacterType, BeforeValidator(_validate_character_type)
+    ] = Field(..., alias="type")
     identity: CharacterIdentity
     abilities: dict[str, int] = Field(default_factory=dict)  # e.g., {"strength": 16}
     combat: CombatStats = Field(default_factory=CombatStats)
