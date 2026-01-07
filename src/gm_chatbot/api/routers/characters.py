@@ -1,7 +1,5 @@
 """Character router."""
 
-from typing import Optional
-
 from fastapi import APIRouter, Body, Depends, status
 from fastapi.responses import Response
 
@@ -17,7 +15,7 @@ router = APIRouter()
 @router.get("/campaigns/{campaign_id}/characters", response_model=APIResponse[list[CharacterSheet]])
 async def list_characters(
     campaign_id: str,
-    character_type: Optional[str] = None,
+    character_type: str | None = None,
     service: CharacterService = Depends(get_character_service),
 ):
     """List characters in a campaign."""
@@ -27,7 +25,7 @@ async def list_characters(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to list characters: {str(e)}",
+            f"Failed to list characters: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -59,7 +57,7 @@ async def create_character(
     except Exception as e:
         raise APIError(
             ErrorCodes.VALIDATION_ERROR,
-            f"Failed to create character: {str(e)}",
+            f"Failed to create character: {e!s}",
             status_code=status.HTTP_400_BAD_REQUEST,
         ) from e
 
@@ -86,7 +84,7 @@ async def get_character(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to get character: {str(e)}",
+            f"Failed to get character: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -115,7 +113,7 @@ async def update_character(
     except Exception as e:
         raise APIError(
             ErrorCodes.VALIDATION_ERROR,
-            f"Failed to update character: {str(e)}",
+            f"Failed to update character: {e!s}",
             status_code=status.HTTP_400_BAD_REQUEST,
         ) from e
 
@@ -141,7 +139,7 @@ async def delete_character(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to delete character: {str(e)}",
+            f"Failed to delete character: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -174,7 +172,7 @@ async def export_character(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to export character: {str(e)}",
+            f"Failed to export character: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -197,6 +195,6 @@ async def import_character(
     except Exception as e:
         raise APIError(
             ErrorCodes.VALIDATION_ERROR,
-            f"Failed to import character: {str(e)}",
+            f"Failed to import character: {e!s}",
             status_code=status.HTTP_400_BAD_REQUEST,
         ) from e

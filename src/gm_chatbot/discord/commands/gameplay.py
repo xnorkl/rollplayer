@@ -23,7 +23,9 @@ def setup_gameplay_commands(bot: DiscordBot) -> None:
     )
 
     @roll_group.command(name="dice", description="Roll dice")
-    @app_commands.describe(expression="Dice expression (e.g., 2d6+3)", reason="Reason for roll (optional)")
+    @app_commands.describe(
+        expression="Dice expression (e.g., 2d6+3)", reason="Reason for roll (optional)"
+    )
     async def roll_dice(
         interaction: discord.Interaction,
         expression: str,

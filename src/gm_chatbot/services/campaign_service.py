@@ -1,12 +1,11 @@
 """Campaign service for CRUD operations."""
 
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Optional
 from uuid import uuid4
 
 from ..artifacts.store import ArtifactStore
 from ..artifacts.validator import ArtifactValidator
+from ..lib.datetime import utc_now
+from ..lib.types import CampaignStatus, MembershipRole
 from ..models.campaign import Campaign
 from ..models.membership import CampaignMembership
 
@@ -14,7 +13,7 @@ from ..models.membership import CampaignMembership
 class CampaignService:
     """Service for managing campaigns."""
 
-    def __init__(self, store: Optional[ArtifactStore] = None):
+    def __init__(self, store: ArtifactStore | None = None):
         """
         Initialize campaign service.
 
@@ -28,8 +27,8 @@ class CampaignService:
         self,
         name: str,
         rule_system: str,
-        description: Optional[str] = None,
-        created_by: Optional[str] = None,
+        description: str | None = None,
+        created_by: str | None = None,
     ) -> Campaign:
         """
         Create a new campaign.
@@ -49,7 +48,7 @@ class CampaignService:
             rule_system=rule_system,
             description=description,
             created_by=created_by,
-            status="draft",
+            status=CampaignStatus.DRAFT,
         )
         campaign.metadata.id = campaign_id
 
@@ -83,7 +82,7 @@ class CampaignService:
         Raises:
             FileNotFoundError: If campaign not found
         """
-        return self.store.load_artifact(Campaign, campaign_id, "campaign.yaml")
+        return self.store.load_artifact(Campaign, campaign_id, "campaign.yaml")  # type: ignore[return-value]
 
     async def update_campaign(self, campaign: Campaign) -> Campaign:
         """
@@ -99,12 +98,10 @@ class CampaignService:
         self.validator.validate_campaign(campaign.model_dump())
 
         # Update timestamp
-        campaign.metadata.updated_at = datetime.now(timezone.utc)
+        campaign.metadata.updated_at = utc_now()
 
         # Save
-        self.store.save_artifact(
-            campaign, campaign.metadata.id, "campaign", "campaign.yaml"
-        )
+        self.store.save_artifact(campaign, campaign.metadata.id, "campaign", "campaign.yaml")
 
         return campaign
 
@@ -147,8 +144,8 @@ class CampaignService:
         self,
         campaign_id: str,
         player_id: str,
-        role: str = "player",
-        character_id: Optional[str] = None,
+        role: str | MembershipRole = "player",
+        character_id: str | None = None,
     ) -> CampaignMembership:
         """
         Add a player to a campaign.
@@ -168,14 +165,15 @@ class CampaignService:
         # Check if already a member
         existing = await self.get_membership(campaign_id, player_id)
         if existing is not None:
-            raise ValueError(
-                f"Player {player_id} is already a member of campaign {campaign_id}"
-            )
+            raise ValueError(f"Player {player_id} is already a member of campaign {campaign_id}")
+
+        # Convert string to enum if needed (for backward compatibility)
+        role_enum = MembershipRole(role) if isinstance(role, str) else role
 
         membership = CampaignMembership(
             player_id=player_id,
             campaign_id=campaign_id,
-            role=role,
+            role=role_enum,
             character_id=character_id,
         )
         membership.metadata.id = str(uuid4())
@@ -228,8 +226,8 @@ class CampaignService:
         self,
         campaign_id: str,
         player_id: str,
-        role: Optional[str] = None,
-        character_id: Optional[str] = None,
+        role: str | None = None,
+        character_id: str | None = None,
     ) -> CampaignMembership:
         """
         Update a campaign membership.
@@ -237,12 +235,14 @@ class CampaignService:
         Args:
             campaign_id: Campaign identifier
             player_id: Player identifier
-            role: Optional new role
+            role: Optional new role (string or MembershipRole enum)
             character_id: Optional new character ID
 
         Returns:
             Updated membership
         """
+        from ..lib.types import MembershipRole
+
         membership = await self.get_membership(campaign_id, player_id)
         if membership is None:
             raise FileNotFoundError(
@@ -250,11 +250,15 @@ class CampaignService:
             )
 
         if role is not None:
-            membership.role = role
+            # Convert string to enum if needed (for backward compatibility)
+            if isinstance(role, str):
+                membership.role = MembershipRole(role)
+            else:
+                membership.role = role
         if character_id is not None:
             membership.character_id = character_id
 
-        membership.metadata.updated_at = datetime.utcnow()
+        membership.metadata.updated_at = utc_now()
 
         # Save
         self.store.save_artifact(
@@ -317,9 +321,7 @@ class CampaignService:
 
         return memberships
 
-    async def get_membership(
-        self, campaign_id: str, player_id: str
-    ) -> Optional[CampaignMembership]:
+    async def get_membership(self, campaign_id: str, player_id: str) -> CampaignMembership | None:
         """
         Get a specific membership record.
 
@@ -336,7 +338,7 @@ class CampaignService:
             try:
                 return self.store.load_artifact(
                     CampaignMembership, campaign_id, f"memberships/{player_id}.yaml"
-                )
+                )  # type: ignore[return-value]
             except Exception:
                 return None
         return None

@@ -1,11 +1,8 @@
 """Anthropic LLM provider."""
 
 import os
-from typing import Optional
 
 from anthropic import AsyncAnthropic
-
-from .interface import LLMProvider
 
 
 class AnthropicProvider:
@@ -13,7 +10,7 @@ class AnthropicProvider:
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         model: str = "claude-3-haiku-20240307",
     ):
         """
@@ -25,7 +22,7 @@ class AnthropicProvider:
         """
         self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
         self.model = model
-        self.client: Optional[AsyncAnthropic] = None
+        self.client: AsyncAnthropic | None = None
         if self.api_key:
             self.client = AsyncAnthropic(api_key=self.api_key)
 
@@ -63,4 +60,3 @@ class AnthropicProvider:
     async def is_available(self) -> bool:
         """Check if Anthropic is available."""
         return self.client is not None
-

@@ -1,7 +1,7 @@
 """Discord interactive components."""
 
 import discord
-from discord.ui import Button, Select, Modal, TextInput
+from discord.ui import Button
 
 
 class CharacterSheetView(discord.ui.View):
@@ -14,4 +14,6 @@ class CharacterSheetView(discord.ui.View):
     @discord.ui.button(label="View Details", style=discord.ButtonStyle.primary)
     async def view_details(self, interaction: discord.Interaction, button: Button) -> None:
         """View character details."""
-        await interaction.response.send_message("Character details will be shown here.", ephemeral=True)
+        await interaction.response.send_message(
+            "Character details will be shown here.", ephemeral=True
+        )

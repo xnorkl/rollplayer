@@ -1,7 +1,5 @@
 """GM service for coordinating LLM, tools, and artifacts."""
 
-from typing import Optional
-
 from ..artifacts.validator import ArtifactValidator
 from ..models.chat import ChatMessage
 from ..tools.llm.interface import LLMProvider
@@ -13,9 +11,9 @@ class GMService:
 
     def __init__(
         self,
-        llm_provider: Optional[LLMProvider] = None,
-        dice_registry: Optional[DiceToolRegistry] = None,
-        validator: Optional[ArtifactValidator] = None,
+        llm_provider: LLMProvider | None = None,
+        dice_registry: DiceToolRegistry | None = None,
+        validator: ArtifactValidator | None = None,
     ):
         """
         Initialize GM service.

@@ -1,6 +1,6 @@
 """CLI adapter."""
 
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
 
 from ..adapters.interface import PlatformConfig
 from ..models.chat import ChatMessage

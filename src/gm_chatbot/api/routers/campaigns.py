@@ -1,12 +1,10 @@
 """Campaign router."""
 
-from typing import Optional
-
 from fastapi import APIRouter, Depends, status
 
 from ...api.dependencies import get_campaign_service
 from ...api.exceptions import APIError, ErrorCodes
-from ...models.campaign import Campaign
+from ...models.campaign import Campaign, CampaignCreate
 from ...models.chat import APIResponse
 from ...services.campaign_service import CampaignService
 
@@ -24,32 +22,33 @@ async def list_campaigns(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to list campaigns: {str(e)}",
+            f"Failed to list campaigns: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
 
-@router.post("/campaigns", response_model=APIResponse[Campaign], status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/campaigns",
+    response_model=APIResponse[Campaign],
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_campaign(
-    name: str,
-    rule_system: str,
-    description: Optional[str] = None,
-    created_by: Optional[str] = None,
+    campaign_create: CampaignCreate,
     service: CampaignService = Depends(get_campaign_service),
 ):
     """Create a new campaign."""
     try:
         campaign = await service.create_campaign(
-            name=name,
-            rule_system=rule_system,
-            description=description,
-            created_by=created_by,
+            name=campaign_create.name,
+            rule_system=campaign_create.rule_system,
+            description=campaign_create.description,
+            created_by=campaign_create.created_by,
         )
         return APIResponse(success=True, data=campaign)
     except Exception as e:
         raise APIError(
             ErrorCodes.VALIDATION_ERROR,
-            f"Failed to create campaign: {str(e)}",
+            f"Failed to create campaign: {e!s}",
             status_code=status.HTTP_400_BAD_REQUEST,
         ) from e
 
@@ -72,7 +71,7 @@ async def get_campaign(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to get campaign: {str(e)}",
+            f"Failed to get campaign: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -98,7 +97,7 @@ async def update_campaign(
     except Exception as e:
         raise APIError(
             ErrorCodes.VALIDATION_ERROR,
-            f"Failed to update campaign: {str(e)}",
+            f"Failed to update campaign: {e!s}",
             status_code=status.HTTP_400_BAD_REQUEST,
         ) from e
 
@@ -114,7 +113,7 @@ async def delete_campaign(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to delete campaign: {str(e)}",
+            f"Failed to delete campaign: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -140,7 +139,7 @@ async def activate_module(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to activate module: {str(e)}",
+            f"Failed to activate module: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -158,22 +157,28 @@ async def list_campaign_members(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to list campaign members: {str(e)}",
+            f"Failed to list campaign members: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
 
-@router.post("/campaigns/{campaign_id}/players", response_model=APIResponse[dict], status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/campaigns/{campaign_id}/players",
+    response_model=APIResponse[dict],
+    status_code=status.HTTP_201_CREATED,
+)
 async def add_player_to_campaign(
     campaign_id: str,
     player_id: str,
     role: str = "player",
-    character_id: Optional[str] = None,
+    character_id: str | None = None,
     service: CampaignService = Depends(get_campaign_service),
 ):
     """Add a player to a campaign."""
     try:
-        membership = await service.add_player(campaign_id, player_id, role, character_id)
+        membership = await service.add_player(
+            campaign_id, player_id, role, character_id
+        )
         return APIResponse(
             success=True,
             data={
@@ -199,18 +204,20 @@ async def add_player_to_campaign(
             ) from e
         raise APIError(
             ErrorCodes.VALIDATION_ERROR,
-            f"Failed to add player to campaign: {str(e)}",
+            f"Failed to add player to campaign: {e!s}",
             status_code=status.HTTP_400_BAD_REQUEST,
         ) from e
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to add player to campaign: {str(e)}",
+            f"Failed to add player to campaign: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
 
-@router.get("/campaigns/{campaign_id}/players/{player_id}", response_model=APIResponse[dict])
+@router.get(
+    "/campaigns/{campaign_id}/players/{player_id}", response_model=APIResponse[dict]
+)
 async def get_campaign_membership(
     campaign_id: str,
     player_id: str,
@@ -240,22 +247,26 @@ async def get_campaign_membership(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to get membership: {str(e)}",
+            f"Failed to get membership: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
 
-@router.put("/campaigns/{campaign_id}/players/{player_id}", response_model=APIResponse[dict])
+@router.put(
+    "/campaigns/{campaign_id}/players/{player_id}", response_model=APIResponse[dict]
+)
 async def update_campaign_membership(
     campaign_id: str,
     player_id: str,
-    role: Optional[str] = None,
-    character_id: Optional[str] = None,
+    role: str | None = None,
+    character_id: str | None = None,
     service: CampaignService = Depends(get_campaign_service),
 ):
     """Update membership (role/character)."""
     try:
-        membership = await service.update_membership(campaign_id, player_id, role, character_id)
+        membership = await service.update_membership(
+            campaign_id, player_id, role, character_id
+        )
         return APIResponse(
             success=True,
             data={
@@ -275,12 +286,15 @@ async def update_campaign_membership(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to update membership: {str(e)}",
+            f"Failed to update membership: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
 
-@router.delete("/campaigns/{campaign_id}/players/{player_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/campaigns/{campaign_id}/players/{player_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
 async def remove_player_from_campaign(
     campaign_id: str,
     player_id: str,
@@ -304,12 +318,12 @@ async def remove_player_from_campaign(
             ) from e
         raise APIError(
             ErrorCodes.VALIDATION_ERROR,
-            f"Failed to remove player from campaign: {str(e)}",
+            f"Failed to remove player from campaign: {e!s}",
             status_code=status.HTTP_400_BAD_REQUEST,
         ) from e
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to remove player from campaign: {str(e)}",
+            f"Failed to remove player from campaign: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e

@@ -43,6 +43,6 @@ async def get_rules(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to load rules: {str(e)}",
+            f"Failed to load rules: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e

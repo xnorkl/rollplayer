@@ -2,12 +2,8 @@
 
 import asyncio
 import re
-import subprocess
-from datetime import datetime
-from typing import Optional
 
 from ...models.dice import DiceResult
-from .interface import DiceToolInterface
 
 
 class CLIDiceTool:
@@ -47,7 +43,7 @@ class CLIDiceTool:
         # Fallback to local calculation
         return await self._roll_local(expression)
 
-    async def _roll_with_cli(self, expression: str) -> Optional[DiceResult]:
+    async def _roll_with_cli(self, expression: str) -> DiceResult | None:
         """Roll using CLI tool."""
         try:
             process = await asyncio.create_subprocess_exec(
@@ -56,7 +52,7 @@ class CLIDiceTool:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            stdout, stderr = await process.communicate()
+            stdout, _stderr = await process.communicate()
             if process.returncode == 0:
                 # Parse CLI output (format may vary)
                 total = int(stdout.decode().strip())
@@ -130,6 +126,6 @@ class CLIDiceTool:
                 expression = expression.replace(f"{{{key}}}", str(value))
 
             # Evaluate (simple approach - use ast.literal_eval for safety)
-            return int(eval(expression))  # noqa: S307
+            return int(eval(expression))
         except Exception as e:
             raise ValueError(f"Failed to evaluate expression '{expression}': {e}") from e

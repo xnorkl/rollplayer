@@ -2,13 +2,6 @@
 
 import pytest
 
-from tests.fixtures.services import (
-    campaign_service,
-    character_service,
-    player_service,
-    session_service,
-)
-
 
 @pytest.fixture
 async def player(player_service):
@@ -57,12 +50,8 @@ async def campaign_with_members(campaign_service, player_service):
     )
 
     # Add members
-    await campaign_service.add_player(
-        campaign.metadata.id, player1.metadata.id, role="player"
-    )
-    await campaign_service.add_player(
-        campaign.metadata.id, player2.metadata.id, role="player"
-    )
+    await campaign_service.add_player(campaign.metadata.id, player1.metadata.id, role="player")
+    await campaign_service.add_player(campaign.metadata.id, player2.metadata.id, role="player")
     await campaign_service.add_player(campaign.metadata.id, gm.metadata.id, role="gm")
 
     return {

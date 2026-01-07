@@ -4,27 +4,18 @@ import os
 import tempfile
 from pathlib import Path
 
-# Import all fixtures from fixtures modules
-from tests.fixtures.store import artifact_store, temp_campaigns_dir
-from tests.fixtures.services import (
-    campaign_service,
-    character_service,
-    player_service,
-    session_service,
-)
-from tests.fixtures.data import (
-    player,
-    campaign,
-    campaign_with_members,
-    character,
-    active_session,
-    ended_session,
-)
-
 # Keep existing fixtures for backward compatibility
 import pytest
+
 from gm_chatbot.services.game_state_service import GameStateService
 from gm_chatbot.tools.registry import DiceToolRegistry
+
+# Import all fixtures from fixtures modules
+pytest_plugins = [
+    "tests.fixtures.data",
+    "tests.fixtures.services",
+    "tests.fixtures.store",
+]
 
 
 @pytest.fixture(scope="function", autouse=True)

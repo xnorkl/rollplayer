@@ -1,10 +1,8 @@
 """Base command infrastructure."""
 
 import logging
-from typing import Optional
 
 import discord
-from discord import app_commands
 from discord.ext import commands
 
 from ...services.discord_context_service import DiscordContextService
@@ -33,7 +31,7 @@ class BaseCommand:
     async def resolve_context(
         self,
         interaction: discord.Interaction,
-    ) -> Optional[object]:
+    ) -> object | None:
         """
         Resolve Discord context from interaction.
 
@@ -119,7 +117,7 @@ def error_handler(func):
             logger.error(f"Error in command {func.__name__}: {e}", exc_info=True)
             await self.send_error(
                 interaction,
-                f"An error occurred: {str(e)}",
+                f"An error occurred: {e!s}",
             )
 
     return wrapper

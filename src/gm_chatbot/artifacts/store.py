@@ -3,7 +3,6 @@
 import fcntl
 import os
 from pathlib import Path
-from typing import Optional
 
 from ..models.base import BaseArtifact
 
@@ -60,7 +59,7 @@ class ArtifactStore:
         artifact: BaseArtifact,
         campaign_id: str,
         artifact_type: str,
-        filename: Optional[str] = None,
+        filename: str | None = None,
     ) -> Path:
         """
         Save an artifact to YAML file with atomic write.
@@ -103,7 +102,7 @@ class ArtifactStore:
         artifact_class: type[BaseArtifact],
         campaign_id: str,
         filename: str,
-    ) -> BaseArtifact:
+    ) -> BaseArtifact:  # type: ignore[return-type]
         """
         Load an artifact from YAML file.
 
@@ -134,7 +133,7 @@ class ArtifactStore:
     def list_artifacts(
         self,
         campaign_id: str,
-        artifact_type: Optional[str] = None,
+        artifact_type: str | None = None,
     ) -> list[Path]:
         """
         List artifact files in a campaign.

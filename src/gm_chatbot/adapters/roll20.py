@@ -1,10 +1,12 @@
 """Roll20 WebSocket adapter."""
 
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING
 
-from fastapi import WebSocket
+if TYPE_CHECKING:
+    from fastapi import WebSocket
 
-from ..adapters.interface import PlatformAdapter, PlatformConfig
+from ..adapters.interface import PlatformConfig
 from ..models.chat import ChatMessage
 
 
@@ -23,7 +25,7 @@ class Roll20Adapter:
 
     async def connect(self, config: PlatformConfig) -> None:
         """Establish WebSocket connection."""
-        self.websocket = config.websocket
+        self.websocket = config.websocket  # type: ignore[assignment]
         if self.websocket:
             await self.websocket.accept()
 

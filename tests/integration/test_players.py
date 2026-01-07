@@ -4,7 +4,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 from gm_chatbot.api.app import create_app
-from tests.fixtures.store import artifact_store
 
 
 @pytest.fixture

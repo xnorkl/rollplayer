@@ -1,11 +1,12 @@
 """Game action models."""
 
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Literal
 from uuid import uuid4
 
 from pydantic import Field
 
+from ..lib.datetime import utc_now
 from .base import BaseModel
 from .dice import DiceResult
 
@@ -32,7 +33,7 @@ class GameAction(BaseModel):
     """A discrete game event that transitions game state."""
 
     action_id: str = Field(default_factory=lambda: str(uuid4()))
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utc_now)
     actor_id: str  # Character or GM identifier
     actor_type: Literal["player", "gm"]
     action_type: str  # "attack", "move", "cast_spell", etc.
@@ -40,6 +41,6 @@ class GameAction(BaseModel):
     parameters: dict = Field(default_factory=dict)  # Action-specific parameters
     dice_results: list[DiceResult] = Field(default_factory=list)
     outcome: ActionOutcome
-    session_id: Optional[str] = Field(
+    session_id: str | None = Field(
         default=None, description="Session during which this action occurred"
     )

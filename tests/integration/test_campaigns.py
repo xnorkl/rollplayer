@@ -2,8 +2,6 @@
 
 import pytest
 
-from gm_chatbot.models.campaign import Campaign
-
 
 @pytest.mark.asyncio
 async def test_create_campaign(campaign_service):

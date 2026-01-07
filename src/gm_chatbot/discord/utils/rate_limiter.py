@@ -2,7 +2,6 @@
 
 import time
 from collections import defaultdict
-from typing import Optional
 
 
 class RateLimiter:
@@ -45,9 +44,7 @@ class RateLimiter:
         now = time.time()
 
         # Clean old entries
-        self.user_commands[user_id] = [
-            t for t in self.user_commands[user_id] if now - t < window
-        ]
+        self.user_commands[user_id] = [t for t in self.user_commands[user_id] if now - t < window]
 
         # Check limit
         if len(self.user_commands[user_id]) >= limit:

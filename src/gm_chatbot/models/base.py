@@ -1,19 +1,26 @@
 """Base models for all artifacts."""
 
-import yaml
-from datetime import datetime, timezone
-from typing import Any
+from typing import TYPE_CHECKING, Any, TypeVar
 from uuid import uuid4
 
+import yaml
 from pydantic import BaseModel, ConfigDict, Field
+
+from ..lib.datetime import parse_datetime, utc_now
+from ..lib.types import UTC_DATETIME
+
+if TYPE_CHECKING:
+    T = TypeVar("T", bound="BaseArtifact")
+else:
+    T = TypeVar("T")
 
 
 class ArtifactMetadata(BaseModel):
     """Metadata for all artifacts."""
 
     id: str = Field(default_factory=lambda: str(uuid4()))
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: UTC_DATETIME = Field(default_factory=utc_now)
+    updated_at: UTC_DATETIME = Field(default_factory=utc_now)
     version: int = Field(default=1, ge=1)
     schema_version: str = Field(default="1.0")
 
@@ -39,7 +46,7 @@ class BaseArtifact(BaseModel):
         )
 
     @classmethod
-    def from_yaml(cls, content: str) -> "BaseArtifact":
+    def from_yaml(cls: type[T], content: str) -> T:
         """Deserialize from YAML string."""
         data = yaml.safe_load(content)
         if data is None:
@@ -55,24 +62,12 @@ class BaseArtifact(BaseModel):
             return {k: BaseArtifact._parse_datetime_strings(v) for k, v in obj.items()}
         elif isinstance(obj, list):
             return [BaseArtifact._parse_datetime_strings(item) for item in obj]
-        elif isinstance(obj, str):
+        elif isinstance(obj, str) and "T" in obj and len(obj) > 10:
             # Try to parse ISO format datetime strings
             # Look for ISO datetime pattern: YYYY-MM-DDTHH:MM:SS...
-            if "T" in obj and len(obj) > 10:
-                try:
-                    # Python 3.11+ fromisoformat can handle 'Z' directly
-                    # For older Python, replace 'Z' with '+00:00'
-                    if obj.endswith("Z"):
-                        # Try with Z first (Python 3.11+)
-                        try:
-                            return datetime.fromisoformat(obj.replace("Z", "+00:00"))
-                        except ValueError:
-                            # Fallback: remove Z and parse as naive datetime
-                            return datetime.fromisoformat(obj[:-1])
-                    else:
-                        # No Z suffix, try parsing as-is
-                        return datetime.fromisoformat(obj)
-                except (ValueError, AttributeError):
-                    # Not a datetime string, return as-is
-                    pass
+            try:
+                return parse_datetime(obj)
+            except (ValueError, TypeError):
+                # Not a datetime string, return as-is
+                pass
         return obj

@@ -1,9 +1,10 @@
 """FastAPI application factory."""
 
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from scalar_fastapi import get_scalar_api_reference, Layout, SearchHotKey
+from scalar_fastapi import Layout, SearchHotKey, get_scalar_api_reference
 
 from .exceptions import APIError
 
@@ -30,16 +31,26 @@ def create_app() -> FastAPI:
 
     # CORS middleware
     app.add_middleware(
-        CORSMiddleware,
+        CORSMiddleware,  # type: ignore[arg-type]
         allow_origins=["*"],  # Configure appropriately for production
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
+    # Exception handler for FastAPI validation errors
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(
+        _request: Request, exc: RequestValidationError
+    ):
+        return JSONResponse(
+            status_code=422,
+            content={"detail": exc.errors()},
+        )
+
     # Custom exception handler for APIError to return {"error": {...}} format
     @app.exception_handler(APIError)
-    async def api_error_handler(request: Request, exc: APIError):
+    async def api_error_handler(_request: Request, exc: APIError):
         """Handle APIError exceptions and return standardized error format."""
         return JSONResponse(
             status_code=exc.status_code,
@@ -65,15 +76,17 @@ def create_app() -> FastAPI:
 
     # Include routers
     from .routers import (
+        actions,
         campaigns,
         characters,
-        actions,
         chat,
-        tools,
-        rules,
         health,
         players,
+        rules,
         sessions,
+        tools,
+    )
+    from .routers import (
         discord as discord_router,
     )
 
@@ -89,3 +102,7 @@ def create_app() -> FastAPI:
     app.include_router(discord_router.router, prefix="/api/v1", tags=["Discord"])
 
     return app
+
+
+# Create app instance for uvicorn
+app = create_app()

@@ -1,24 +1,20 @@
 """Session router."""
 
-from typing import Optional
-
 from fastapi import APIRouter, Body, Depends, status
 
 from ...api.dependencies import get_session_service
 from ...api.exceptions import APIError, ErrorCodes
-from ...models.session import Session, SessionParticipant
 from ...models.chat import APIResponse
+from ...models.session import Session, SessionParticipant
 from ...services.session_service import SessionService
 
 router = APIRouter()
 
 
-@router.get(
-    "/campaigns/{campaign_id}/sessions", response_model=APIResponse[list[Session]]
-)
+@router.get("/campaigns/{campaign_id}/sessions", response_model=APIResponse[list[Session]])
 async def list_sessions(
     campaign_id: str,
-    session_status: Optional[str] = None,
+    session_status: str | None = None,
     service: SessionService = Depends(get_session_service),
 ):
     """List sessions for a campaign."""
@@ -28,7 +24,7 @@ async def list_sessions(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to list sessions: {str(e)}",
+            f"Failed to list sessions: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -41,8 +37,8 @@ async def list_sessions(
 async def create_session(
     campaign_id: str,
     started_by: str,
-    name: Optional[str] = None,
-    notes: Optional[str] = None,
+    name: str | None = None,
+    notes: str | None = None,
     service: SessionService = Depends(get_session_service),
 ):
     """Start a new session."""
@@ -63,20 +59,18 @@ async def create_session(
             ) from e
         raise APIError(
             ErrorCodes.VALIDATION_ERROR,
-            f"Failed to create session: {str(e)}",
+            f"Failed to create session: {e!s}",
             status_code=status.HTTP_400_BAD_REQUEST,
         ) from e
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to create session: {str(e)}",
+            f"Failed to create session: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
 
-@router.get(
-    "/campaigns/{campaign_id}/sessions/active", response_model=APIResponse[Session]
-)
+@router.get("/campaigns/{campaign_id}/sessions/active", response_model=APIResponse[Session])
 async def get_active_session(
     campaign_id: str,
     service: SessionService = Depends(get_session_service),
@@ -96,7 +90,7 @@ async def get_active_session(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to get active session: {str(e)}",
+            f"Failed to get active session: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -123,7 +117,7 @@ async def get_session(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to get session: {str(e)}",
+            f"Failed to get session: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -159,13 +153,13 @@ async def update_session(
             ) from e
         raise APIError(
             ErrorCodes.VALIDATION_ERROR,
-            f"Failed to update session: {str(e)}",
+            f"Failed to update session: {e!s}",
             status_code=status.HTTP_400_BAD_REQUEST,
         ) from e
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to update session: {str(e)}",
+            f"Failed to update session: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -197,13 +191,13 @@ async def delete_session(
             ) from e
         raise APIError(
             ErrorCodes.VALIDATION_ERROR,
-            f"Failed to delete session: {str(e)}",
+            f"Failed to delete session: {e!s}",
             status_code=status.HTTP_400_BAD_REQUEST,
         ) from e
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to delete session: {str(e)}",
+            f"Failed to delete session: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -230,7 +224,7 @@ async def end_session(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to end session: {str(e)}",
+            f"Failed to end session: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -257,7 +251,7 @@ async def list_participants(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to list participants: {str(e)}",
+            f"Failed to list participants: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -271,7 +265,7 @@ async def join_session(
     campaign_id: str,
     session_id: str,
     player_id: str = Body(...),
-    character_id: Optional[str] = Body(None),
+    character_id: str | None = Body(None),
     is_gm: bool = Body(False),
     service: SessionService = Depends(get_session_service),
 ):
@@ -319,13 +313,13 @@ async def join_session(
             ) from e
         raise APIError(
             ErrorCodes.VALIDATION_ERROR,
-            f"Failed to join session: {str(e)}",
+            f"Failed to join session: {e!s}",
             status_code=status.HTTP_400_BAD_REQUEST,
         ) from e
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to join session: {str(e)}",
+            f"Failed to join session: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -359,6 +353,6 @@ async def leave_session(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to leave session: {str(e)}",
+            f"Failed to leave session: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e

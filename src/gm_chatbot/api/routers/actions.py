@@ -1,7 +1,5 @@
 """Actions router."""
 
-from typing import Optional
-
 from fastapi import APIRouter, Depends, status
 
 from ...api.dependencies import get_game_state_service
@@ -16,7 +14,7 @@ router = APIRouter()
 @router.get("/campaigns/{campaign_id}/actions", response_model=APIResponse[list[GameAction]])
 async def list_actions(
     campaign_id: str,
-    limit: Optional[int] = None,
+    limit: int | None = None,
     service: GameStateService = Depends(get_game_state_service),
 ):
     """List action history for a campaign."""
@@ -26,7 +24,7 @@ async def list_actions(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to list actions: {str(e)}",
+            f"Failed to list actions: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -48,7 +46,7 @@ async def submit_action(
     except Exception as e:
         raise APIError(
             ErrorCodes.VALIDATION_ERROR,
-            f"Failed to apply action: {str(e)}",
+            f"Failed to apply action: {e!s}",
             status_code=status.HTTP_400_BAD_REQUEST,
         ) from e
 
@@ -73,7 +71,7 @@ async def get_game_state(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to get game state: {str(e)}",
+            f"Failed to get game state: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -105,6 +103,6 @@ async def rollback_action(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to rollback action: {str(e)}",
+            f"Failed to rollback action: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e

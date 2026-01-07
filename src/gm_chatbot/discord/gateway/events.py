@@ -1,7 +1,6 @@
 """Discord event handlers."""
 
 import logging
-from typing import Optional
 
 import discord
 

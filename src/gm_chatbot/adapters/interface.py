@@ -1,12 +1,15 @@
 """Platform adapter interface."""
 
-from typing import Awaitable, Callable, Protocol
+from collections.abc import Awaitable, Callable
+from typing import Protocol
 
 from ..models.chat import ChatMessage
 
 
 class PlatformConfig:
     """Configuration for platform adapters."""
+
+    websocket: object | None = None  # type: ignore[assignment]
 
     def __init__(self, **kwargs):
         """Initialize platform config."""

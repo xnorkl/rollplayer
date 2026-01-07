@@ -1,9 +1,7 @@
 """Discord linking service for managing Discord user to player links."""
 
 import fcntl
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Optional
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from ..artifacts.store import ArtifactStore
@@ -15,7 +13,7 @@ from ..services.player_service import PlayerService
 class DiscordLinkingService:
     """Service for managing Discord user to player links."""
 
-    def __init__(self, store: Optional[ArtifactStore] = None):
+    def __init__(self, store: ArtifactStore | None = None):
         """
         Initialize Discord linking service.
 
@@ -29,9 +27,9 @@ class DiscordLinkingService:
         self,
         discord_user_id: str,
         discord_username: str,
-        player_id: Optional[str] = None,
-        guild_id: Optional[str] = None,
-        guild_name: Optional[str] = None,
+        player_id: str | None = None,
+        guild_id: str | None = None,
+        guild_name: str | None = None,
     ) -> DiscordLink:
         """
         Create or update a Discord link for a user.
@@ -56,7 +54,7 @@ class DiscordLinkingService:
                 # Update player_id if provided and different
                 existing_link.player_id = player_id
             existing_link.discord_username = discord_username
-            existing_link.metadata.updated_at = datetime.now(timezone.utc)
+            existing_link.metadata.updated_at = datetime.now(UTC)
 
             # Add guild if provided
             if guild_id and guild_name:
@@ -67,7 +65,7 @@ class DiscordLinkingService:
                         GuildInfo(
                             guild_id=guild_id,
                             guild_name=guild_name,
-                            joined_at=datetime.now(timezone.utc),
+                            joined_at=datetime.now(UTC),
                         )
                     )
 
@@ -92,7 +90,7 @@ class DiscordLinkingService:
             player_id=player_id,
             discord_user_id=discord_user_id,
             discord_username=discord_username,
-            linked_at=datetime.now(timezone.utc),
+            linked_at=datetime.now(UTC),
         )
         link.metadata.id = str(uuid4())
 
@@ -102,14 +100,14 @@ class DiscordLinkingService:
                 GuildInfo(
                     guild_id=guild_id,
                     guild_name=guild_name,
-                    joined_at=datetime.now(timezone.utc),
+                    joined_at=datetime.now(UTC),
                 )
             )
 
         await self._save_discord_link(link)
         return link
 
-    async def get_player_by_discord_id(self, discord_user_id: str) -> Optional[Player]:
+    async def get_player_by_discord_id(self, discord_user_id: str) -> Player | None:
         """
         Get player by Discord user ID.
 
@@ -140,16 +138,14 @@ class DiscordLinkingService:
         """
         link = await self.get_discord_link_by_user_id(discord_user_id)
         if link is None:
-            raise FileNotFoundError(
-                f"Discord link not found for user {discord_user_id}"
-            )
+            raise FileNotFoundError(f"Discord link not found for user {discord_user_id}")
 
         # Delete link file
         link_path = self.store.get_discord_link_path(link.player_id)
         if link_path.exists():
             link_path.unlink()
 
-    async def get_discord_link(self, player_id: str) -> Optional[DiscordLink]:
+    async def get_discord_link(self, player_id: str) -> DiscordLink | None:
         """
         Get Discord link for a player.
 
@@ -171,13 +167,11 @@ class DiscordLinkingService:
                 finally:
                     fcntl.flock(f.fileno(), fcntl.LOCK_UN)
 
-            return DiscordLink.from_yaml(content)
+            return DiscordLink.from_yaml(content)  # type: ignore[return-value]
         except Exception:
             return None
 
-    async def get_discord_link_by_user_id(
-        self, discord_user_id: str
-    ) -> Optional[DiscordLink]:
+    async def get_discord_link_by_user_id(self, discord_user_id: str) -> DiscordLink | None:
         """
         Get Discord link by Discord user ID.
 
@@ -203,9 +197,9 @@ class DiscordLinkingService:
                             finally:
                                 fcntl.flock(f.fileno(), fcntl.LOCK_UN)
 
-                        link = DiscordLink.from_yaml(content)
+                        link = DiscordLink.from_yaml(content)  # type: ignore[assignment]
                         if link.discord_user_id == discord_user_id:
-                            return link
+                            return link  # type: ignore[return-value]
                     except Exception:
                         continue
 

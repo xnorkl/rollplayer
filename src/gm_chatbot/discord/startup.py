@@ -2,7 +2,6 @@
 
 import asyncio
 import logging
-from typing import Optional
 
 from ..artifacts.store import ArtifactStore
 from .bot import DiscordBot
@@ -11,13 +10,13 @@ from .config import DiscordConfig
 
 logger = logging.getLogger(__name__)
 
-_bot_task: Optional[asyncio.Task] = None
-_bot: Optional[DiscordBot] = None
+_bot_task: asyncio.Task | None = None
+_bot: DiscordBot | None = None
 
 
 async def start_discord_bot(
-    config: Optional[DiscordConfig] = None,
-    store: Optional[ArtifactStore] = None,
+    config: DiscordConfig | None = None,
+    store: ArtifactStore | None = None,
 ) -> None:
     """
     Start Discord bot.

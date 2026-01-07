@@ -1,8 +1,8 @@
 """REST API adapter (primary platform)."""
 
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
 
-from ..adapters.interface import PlatformAdapter, PlatformConfig
+from ..adapters.interface import PlatformConfig
 from ..models.chat import ChatMessage
 
 

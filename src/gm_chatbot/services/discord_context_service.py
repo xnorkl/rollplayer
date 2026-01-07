@@ -1,7 +1,5 @@
 """Discord context service for resolving Discord context to game entities."""
 
-from typing import Optional
-
 from ..artifacts.store import ArtifactStore
 from ..models.campaign import Campaign
 from ..models.character import CharacterSheet
@@ -19,11 +17,11 @@ class DiscordContext:
 
     def __init__(
         self,
-        campaign: Optional[Campaign] = None,
-        session: Optional[Session] = None,
-        character: Optional[CharacterSheet] = None,
-        membership: Optional[CampaignMembership] = None,
-        player_id: Optional[str] = None,
+        campaign: Campaign | None = None,
+        session: Session | None = None,
+        character: CharacterSheet | None = None,
+        membership: CampaignMembership | None = None,
+        player_id: str | None = None,
     ):
         """
         Initialize Discord context.
@@ -45,7 +43,7 @@ class DiscordContext:
 class DiscordContextService:
     """Service for resolving Discord context to game entities."""
 
-    def __init__(self, store: Optional[ArtifactStore] = None):
+    def __init__(self, store: ArtifactStore | None = None):
         """
         Initialize Discord context service.
 
@@ -106,17 +104,11 @@ class DiscordContextService:
                     )
 
                     # Resolve character if membership has character_id
-                    if (
-                        context.membership
-                        and context.membership.character_id
-                        and context.campaign
-                    ):
+                    if context.membership and context.membership.character_id and context.campaign:
                         try:
-                            context.character = (
-                                await self.character_service.get_character(
-                                    context.campaign.metadata.id,
-                                    context.membership.character_id,
-                                )
+                            context.character = await self.character_service.get_character(
+                                context.campaign.metadata.id,
+                                context.membership.character_id,
                             )
                         except FileNotFoundError:
                             pass
@@ -125,9 +117,7 @@ class DiscordContextService:
 
         return context
 
-    async def get_active_session_for_channel(
-        self, channel_id: str
-    ) -> Optional[Session]:
+    async def get_active_session_for_channel(self, channel_id: str) -> Session | None:
         """
         Get active session for a Discord channel.
 
@@ -167,9 +157,7 @@ class DiscordContextService:
 
         # Get membership
         try:
-            membership = await self.campaign_service.get_membership(
-                campaign_id, player.metadata.id
-            )
+            membership = await self.campaign_service.get_membership(campaign_id, player.metadata.id)
             if not membership:
                 return False
 

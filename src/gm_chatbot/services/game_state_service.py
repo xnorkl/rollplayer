@@ -1,13 +1,14 @@
 """Game state service for sequential action processing."""
 
-from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING
 
 from ..artifacts.store import ArtifactStore
 from ..artifacts.validator import ArtifactValidator
-from ..models.action import ActionOutcome, GameAction, StateChange
-from ..models.character import CharacterSheet
+from ..models.action import GameAction, StateChange
 from ..services.character_service import CharacterService
+
+if TYPE_CHECKING:
+    from ..models.character import CharacterSheet
 
 
 class GameState:
@@ -30,7 +31,7 @@ class GameState:
 class GameStateManager:
     """Manages game state transitions."""
 
-    def __init__(self, store: Optional[ArtifactStore] = None):
+    def __init__(self, store: ArtifactStore | None = None):
         """
         Initialize game state manager.
 
@@ -81,8 +82,8 @@ class GameStateService:
 
     def __init__(
         self,
-        store: Optional[ArtifactStore] = None,
-        character_service: Optional[CharacterService] = None,
+        store: ArtifactStore | None = None,
+        character_service: CharacterService | None = None,
     ):
         """
         Initialize game state service.
@@ -116,7 +117,6 @@ class GameStateService:
         self.validator.validate_action(action.model_dump())
 
         # Apply state changes
-        state = self.manager.get_state(campaign_id)
         for change in action.outcome.state_changes:
             await self.manager.apply_state_change(change, campaign_id)
 
@@ -145,7 +145,7 @@ class GameStateService:
     async def get_action_history(
         self,
         campaign_id: str,
-        limit: Optional[int] = None,
+        limit: int | None = None,
     ) -> list[GameAction]:
         """
         Get action history for campaign.

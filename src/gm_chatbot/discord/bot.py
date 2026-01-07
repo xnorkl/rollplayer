@@ -1,10 +1,8 @@
 """Discord bot client."""
 
 import logging
-from typing import Optional
 
 import discord
-from discord import app_commands
 from discord.ext import commands
 
 from ..artifacts.store import ArtifactStore
@@ -26,7 +24,7 @@ class DiscordBot(commands.Bot):
     def __init__(
         self,
         config: DiscordConfig,
-        store: Optional[ArtifactStore] = None,
+        store: ArtifactStore | None = None,
     ):
         """
         Initialize Discord bot.

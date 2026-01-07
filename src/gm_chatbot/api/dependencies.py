@@ -1,6 +1,8 @@
 """Dependency injection for FastAPI."""
 
 import os
+import tempfile
+from pathlib import Path
 
 from ..artifacts.store import ArtifactStore
 from ..services.campaign_service import CampaignService
@@ -12,7 +14,6 @@ from ..services.game_state_service import GameStateService
 from ..services.player_service import PlayerService
 from ..services.session_service import SessionService
 from ..tools.registry import DiceToolRegistry
-
 
 # Global instances (singleton pattern)
 _store: ArtifactStore | None = None
@@ -31,7 +32,19 @@ def get_artifact_store() -> ArtifactStore:
     """Get artifact store instance."""
     global _store
     if _store is None:
-        campaigns_dir = os.getenv("CAMPAIGNS_DIR", "/data/campaigns")
+        env_campaigns_dir = os.getenv("CAMPAIGNS_DIR")
+        if env_campaigns_dir is None:
+            # Determine default campaigns directory
+            # Use /data/campaigns for production (Docker), temp directory for local dev
+            data_path = Path("/data")
+            if data_path.exists() and os.access(data_path, os.W_OK):
+                campaigns_dir = "/data/campaigns"
+            else:
+                # Local development: use system temp directory
+                temp_base = tempfile.gettempdir()
+                campaigns_dir = os.path.join(temp_base, "gm_chatbot", "campaigns")
+        else:
+            campaigns_dir = env_campaigns_dir
         _store = ArtifactStore(campaigns_dir=campaigns_dir)
     return _store
 

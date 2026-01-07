@@ -2,7 +2,7 @@
 
 import pytest
 
-from gm_chatbot.models.character import CharacterSheet, CharacterIdentity
+from gm_chatbot.models.character import CharacterIdentity
 
 
 @pytest.mark.asyncio
@@ -12,8 +12,6 @@ async def test_create_character(campaign_service, character_service):
         name="Test Campaign",
         rule_system="shadowdark",
     )
-
-    from gm_chatbot.models.character import CharacterIdentity
 
     character = await character_service.create_character(
         campaign_id=campaign.metadata.id,

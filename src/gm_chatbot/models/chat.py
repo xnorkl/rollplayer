@@ -1,10 +1,12 @@
 """Chat and API response models."""
 
 from datetime import datetime
-from typing import Generic, Optional, TypeVar
+from typing import Generic, TypeVar
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
+
+from ..lib.datetime import utc_now
 
 T = TypeVar("T")
 
@@ -13,8 +15,8 @@ class ChatMessage(BaseModel):
     """Chat message model."""
 
     message: str
-    sender_id: Optional[str] = None
-    sender_type: Optional[str] = None  # "player", "gm", etc.
+    sender_id: str | None = None
+    sender_type: str | None = None  # "player", "gm", etc.
     campaign_id: str
 
 
@@ -30,7 +32,7 @@ class ResponseMeta(BaseModel):
     """Metadata for API responses."""
 
     request_id: str = Field(default_factory=lambda: str(uuid4()))
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utc_now)
     processing_time_ms: float = 0.0
 
 

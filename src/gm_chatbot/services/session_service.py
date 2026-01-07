@@ -1,22 +1,19 @@
 """Session service for session management."""
 
-from gm_chatbot.models import BaseArtifact
-
-from datetime import datetime
-from pathlib import Path
-from typing import Optional
 from uuid import uuid4
 
 from ..artifacts.store import ArtifactStore
 from ..artifacts.validator import ArtifactValidator
-from ..models.session import Session, SessionParticipant
+from ..lib.datetime import utc_now
+from ..lib.types import SessionStatus
 from ..models.membership import CampaignMembership
+from ..models.session import Session, SessionParticipant
 
 
 class SessionService:
     """Service for managing game sessions."""
 
-    def __init__(self, store: Optional[ArtifactStore] = None):
+    def __init__(self, store: ArtifactStore | None = None):
         """
         Initialize session service.
 
@@ -30,8 +27,8 @@ class SessionService:
         self,
         campaign_id: str,
         started_by: str,
-        name: Optional[str] = None,
-        notes: Optional[str] = None,
+        name: str | None = None,
+        notes: str | None = None,
     ) -> Session:
         """
         Create a new session for a campaign.
@@ -66,8 +63,8 @@ class SessionService:
             campaign_id=campaign_id,
             session_number=session_number,
             name=name,
-            status="active",
-            started_at=datetime.utcnow(),
+            status=SessionStatus.ACTIVE,
+            started_at=utc_now(),
             started_by=started_by,
             notes=notes,
             participants=[],
@@ -76,9 +73,7 @@ class SessionService:
 
         # Save session
         filename = f"session_{session_number:03d}.yaml"
-        self.store.save_artifact(
-            session, campaign_id, "session", f"sessions/{filename}"
-        )
+        self.store.save_artifact(session, campaign_id, "session", f"sessions/{filename}")
 
         return session
 
@@ -104,9 +99,9 @@ class SessionService:
             try:
                 session = self.store.load_artifact(
                     Session, campaign_id, f"sessions/{session_file.name}"
-                )
+                )  # type: ignore[assignment]
                 if session.metadata.id == session_id:
-                    return session
+                    return session  # type: ignore[return-value]
             except Exception:
                 continue
 
@@ -129,11 +124,11 @@ class SessionService:
         # Load existing session from storage to check its actual status
         # (the passed-in session may have been modified)
         existing = await self.get_session(campaign_id, session.metadata.id)
-        if existing.status == "ended":
+        if existing.status == SessionStatus.ENDED:
             raise ValueError("Cannot modify an ended session")
 
         # Update timestamp
-        session.metadata.updated_at = datetime.utcnow()
+        session.metadata.updated_at = utc_now()
 
         # Find existing file to preserve filename
         sessions_dir = self.store.get_sessions_dir(campaign_id)
@@ -171,11 +166,11 @@ class SessionService:
         # Mark all active participants as left
         for participant in session.participants:
             if participant.left_at is None:
-                participant.left_at = datetime.utcnow()
+                participant.left_at = utc_now()
 
-        session.status = "ended"
-        session.ended_at = datetime.utcnow()
-        session.metadata.updated_at = datetime.utcnow()
+        session.status = SessionStatus.ENDED
+        session.ended_at = utc_now()
+        session.metadata.updated_at = utc_now()
 
         # Save
         sessions_dir = self.store.get_sessions_dir(campaign_id)
@@ -207,7 +202,7 @@ class SessionService:
         """
         session = await self.get_session(campaign_id, session_id)
 
-        if session.status != "ended":
+        if session.status != SessionStatus.ENDED:
             raise ValueError(f"Cannot delete active/paused session {session_id}")
 
         # Find and delete session file
@@ -225,9 +220,7 @@ class SessionService:
 
         raise FileNotFoundError(f"Session {session_id} not found")
 
-    async def list_sessions(
-        self, campaign_id: str, status: Optional[str] = None
-    ) -> list[Session]:
+    async def list_sessions(self, campaign_id: str, status: str | None = None) -> list[Session]:
         """
         List sessions for a campaign.
 
@@ -255,7 +248,7 @@ class SessionService:
 
         return sorted(sessions, key=lambda s: s.session_number)
 
-    async def get_active_session(self, campaign_id: str) -> Optional[Session]:
+    async def get_active_session(self, campaign_id: str) -> Session | None:
         """
         Get current active or paused session for a campaign.
 
@@ -267,7 +260,7 @@ class SessionService:
         """
         sessions = await self.list_sessions(campaign_id)
         for session in sessions:
-            if session.status in ("active", "paused"):
+            if session.status in (SessionStatus.ACTIVE, SessionStatus.PAUSED):
                 return session
 
         return None
@@ -277,7 +270,7 @@ class SessionService:
         campaign_id: str,
         session_id: str,
         player_id: str,
-        character_id: Optional[str] = None,
+        character_id: str | None = None,
         is_gm: bool = False,
     ) -> Session:
         """
@@ -298,7 +291,7 @@ class SessionService:
         """
         # Validate session is active
         session = await self.get_session(campaign_id, session_id)
-        if session.status != "active":
+        if session.status != SessionStatus.ACTIVE:
             raise ValueError(f"Cannot join session {session_id}: session is not active")
 
         # Check if player is already in another active session
@@ -314,17 +307,12 @@ class SessionService:
         # Check campaign membership
         membership = await self._get_membership(campaign_id, player_id)
         if membership is None:
-            raise ValueError(
-                f"Player {player_id} is not a member of campaign {campaign_id}"
-            )
+            raise ValueError(f"Player {player_id} is not a member of campaign {campaign_id}")
 
         # Validate character ownership (if character specified)
-        if character_id and not is_gm:
-            if membership.character_id != character_id:
-                # Check if character is assigned to player
-                raise ValueError(
-                    f"Character {character_id} is not assigned to player {player_id}"
-                )
+        if character_id and not is_gm and membership.character_id != character_id:
+            # Check if character is assigned to player
+            raise ValueError(f"Character {character_id} is not assigned to player {player_id}")
 
         # Use default character if not specified and not GM
         # Allow players to join without a character (character_id can be None)
@@ -341,11 +329,11 @@ class SessionService:
         participant = SessionParticipant(
             player_id=player_id,
             character_id=character_id,
-            joined_at=datetime.utcnow(),
+            joined_at=utc_now(),
             is_gm=is_gm,
         )
         session.participants.append(participant)
-        session.metadata.updated_at = datetime.utcnow()
+        session.metadata.updated_at = utc_now()
 
         # Save
         sessions_dir = self.store.get_sessions_dir(campaign_id)
@@ -364,9 +352,7 @@ class SessionService:
 
         raise FileNotFoundError(f"Session {session_id} not found")
 
-    async def leave_session(
-        self, campaign_id: str, session_id: str, player_id: str
-    ) -> Session:
+    async def leave_session(self, campaign_id: str, session_id: str, player_id: str) -> Session:
         """
         Remove a participant from a session.
 
@@ -383,8 +369,8 @@ class SessionService:
         # Find and mark participant as left
         for participant in session.participants:
             if participant.player_id == player_id and participant.left_at is None:
-                participant.left_at = datetime.utcnow()
-                session.metadata.updated_at = datetime.utcnow()
+                participant.left_at = utc_now()
+                session.metadata.updated_at = utc_now()
 
                 # Save
                 sessions_dir = self.store.get_sessions_dir(campaign_id)
@@ -404,13 +390,9 @@ class SessionService:
                     except Exception:
                         continue
 
-        raise ValueError(
-            f"Player {player_id} is not an active participant in session {session_id}"
-        )
+        raise ValueError(f"Player {player_id} is not an active participant in session {session_id}")
 
-    async def get_participants(
-        self, campaign_id: str, session_id: str
-    ) -> list[SessionParticipant]:
+    async def get_participants(self, campaign_id: str, session_id: str) -> list[SessionParticipant]:
         """
         List session participants.
 
@@ -424,9 +406,7 @@ class SessionService:
         session = await self.get_session(campaign_id, session_id)
         return [p for p in session.participants if p.left_at is None]
 
-    async def _get_membership(
-        self, campaign_id: str, player_id: str
-    ) -> Optional[CampaignMembership] | BaseArtifact:
+    async def _get_membership(self, campaign_id: str, player_id: str) -> CampaignMembership | None:
         """Get campaign membership for a player."""
         memberships_dir = self.store.get_memberships_dir(campaign_id)
         membership_file = memberships_dir / f"{player_id}.yaml"
@@ -434,7 +414,7 @@ class SessionService:
             try:
                 return self.store.load_artifact(
                     CampaignMembership, campaign_id, f"memberships/{player_id}.yaml"
-                )
+                )  # type: ignore[return-value]
             except Exception:
                 return None
         return None

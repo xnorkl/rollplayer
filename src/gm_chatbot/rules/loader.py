@@ -1,10 +1,9 @@
 """Rule loader for YAML rule files."""
 
 import os
-import yaml
 from pathlib import Path
-from typing import Optional
 
+import yaml
 from pydantic import ValidationError
 
 from ..models.rules import RuleSet
@@ -25,7 +24,7 @@ class RuleLoader:
         self.rules_dir = Path(rules_dir)
         self._cache: dict[str, RuleSet] = {}
 
-    def load_rules(self, system: str, version: Optional[str] = None) -> RuleSet:
+    def load_rules(self, system: str, version: str | None = None) -> RuleSet:
         """
         Load rules for a game system.
 
@@ -58,10 +57,7 @@ class RuleLoader:
             self._cache[cache_key] = ruleset
             return ruleset
         except ValidationError as e:
-            raise ValidationError(
-                f"Invalid rules in {rule_file}: {e.errors()}",
-                model=RuleSet,
-            ) from e
+            raise ValidationError(f"Invalid rules in {rule_file}: {e.errors()}") from e
         except yaml.YAMLError as e:
             raise ValueError(f"YAML parsing error in {rule_file}: {e}") from e
 

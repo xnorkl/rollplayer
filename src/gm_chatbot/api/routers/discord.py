@@ -1,7 +1,5 @@
 """Discord integration router."""
 
-from typing import Optional
-
 from fastapi import APIRouter, Depends, status
 
 from ...api.dependencies import get_discord_binding_service, get_discord_linking_service
@@ -11,18 +9,19 @@ from ...models.discord_binding import DiscordBinding
 from ...models.discord_link import DiscordLink
 from ...services.discord_binding_service import DiscordBindingService
 from ...services.discord_linking_service import DiscordLinkingService
-from ...services.player_service import PlayerService
 
 router = APIRouter()
 
 
-@router.post("/discord/links", response_model=APIResponse[DiscordLink], status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/discord/links", response_model=APIResponse[DiscordLink], status_code=status.HTTP_201_CREATED
+)
 async def create_discord_link(
     discord_user_id: str,
     discord_username: str,
-    player_id: Optional[str] = None,
-    guild_id: Optional[str] = None,
-    guild_name: Optional[str] = None,
+    player_id: str | None = None,
+    guild_id: str | None = None,
+    guild_name: str | None = None,
     linking_service: DiscordLinkingService = Depends(get_discord_linking_service),
 ) -> APIResponse[DiscordLink]:
     """Create Discord link."""
@@ -38,7 +37,7 @@ async def create_discord_link(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to create Discord link: {str(e)}",
+            f"Failed to create Discord link: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -57,13 +56,15 @@ async def get_player_by_discord_id(
                 f"Player not found for Discord user {discord_user_id}",
                 status_code=status.HTTP_404_NOT_FOUND,
             )
-        return APIResponse(success=True, data={"player_id": player.metadata.id, "player": player.model_dump()})
+        return APIResponse(
+            success=True, data={"player_id": player.metadata.id, "player": player.model_dump()}
+        )
     except APIError:
         raise
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to get player: {str(e)}",
+            f"Failed to get player: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -85,7 +86,7 @@ async def unlink_discord_user(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to unlink Discord user: {str(e)}",
+            f"Failed to unlink Discord user: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -113,7 +114,7 @@ async def get_discord_binding(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to get Discord binding: {str(e)}",
+            f"Failed to get Discord binding: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -128,7 +129,7 @@ async def create_or_update_discord_binding(
     channel_id: str,
     channel_name: str,
     bound_by: str,
-    settings: Optional[dict] = None,
+    settings: dict | None = None,
     binding_service: DiscordBindingService = Depends(get_discord_binding_service),
 ) -> APIResponse[DiscordBinding]:
     """Create or update Discord binding."""
@@ -151,7 +152,7 @@ async def create_or_update_discord_binding(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to create/update Discord binding: {str(e)}",
+            f"Failed to create/update Discord binding: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -176,7 +177,7 @@ async def delete_discord_binding(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to delete Discord binding: {str(e)}",
+            f"Failed to delete Discord binding: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
 
@@ -196,6 +197,6 @@ async def list_campaigns_in_guild(
     except Exception as e:
         raise APIError(
             ErrorCodes.INTERNAL_ERROR,
-            f"Failed to list campaigns: {str(e)}",
+            f"Failed to list campaigns: {e!s}",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         ) from e
