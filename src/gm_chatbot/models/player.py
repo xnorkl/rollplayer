@@ -4,7 +4,7 @@ from typing import Annotated, Any
 
 from pydantic import BeforeValidator, Field
 
-from ..lib.types import PlayerStatus
+from ..lib.types import NonEmptyStr, PlayerStatus
 from .base import BaseArtifact
 
 
@@ -18,8 +18,8 @@ def _validate_player_status(v: PlayerStatus | str) -> PlayerStatus:
 class Player(BaseArtifact):
     """Player artifact representing a real human user."""
 
-    username: str = Field(..., min_length=1)
-    display_name: str = Field(..., min_length=1)
+    username: NonEmptyStr
+    display_name: NonEmptyStr
     email: str | None = None
     avatar_url: str | None = None
     status: Annotated[PlayerStatus, BeforeValidator(_validate_player_status)] = Field(
