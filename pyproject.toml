@@ -50,6 +50,11 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 asyncio_mode = "auto"
+markers = [
+    "smoke: Quick smoke tests for critical business logic paths",
+    "slow: Tests that take a long time to run",
+    "integration: Integration tests (may use filesystem)",
+]
 
 [tool.coverage.run]
 source = ["src/gm_chatbot"]

@@ -119,6 +119,9 @@ just check
 # Start development server
 just dev
 
+# Interactive smoke testing shell
+just shell
+
 # Start development server with debug logging
 just dev-debug
 
@@ -128,6 +131,48 @@ just clean
 # Show all available commands
 just --list
 ```
+
+### Smoke Testing
+
+The project includes a fast smoke testing framework for validating critical business logic paths during development. Smoke tests complete in under 10 seconds and require no external dependencies.
+
+```bash
+# Run all smoke tests
+just smoke
+
+# Run smoke tests with verbose output
+just smoke-v
+
+# Run specific test suite
+just smoke-only player
+just smoke-only campaign
+just smoke-only session
+just smoke-only integration
+
+# List available test suites
+just smoke-list
+
+# Run pytest smoke tests
+just test-smoke
+
+# Quick local validation (smoke + unit tests)
+just validate
+
+# Pre-commit checks (format-check + lint + smoke)
+just pre-commit
+
+# Pre-push checks (full CI parity)
+just pre-push
+```
+
+**Interactive Shell**: Use `just shell` to launch an interactive Python REPL with pre-configured services, models, and helper functions for ad-hoc exploration and manual testing.
+
+**Workflow Examples**:
+
+- Quick sanity check: `just smoke` (~5s)
+- Before committing: `just pre-commit` (~15s)
+- Before pushing: `just pre-push` (~60s)
+- Interactive exploration: `just shell`
 
 ### Manual Commands
 

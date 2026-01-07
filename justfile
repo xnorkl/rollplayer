@@ -77,9 +77,9 @@ dev:
 dev-debug:
     LOG_LEVEL=debug uv run uvicorn gm_chatbot.api.app:app --reload --host 0.0.0.0 --port 8000
 
-# Open Python REPL with project loaded
+# Interactive smoke testing shell
 shell:
-    uv run python -i -c "from gm_chatbot.lib import *; from gm_chatbot.models import *; print('GM Chatbot shell ready')"
+    uv run python scripts/shell.py
 
 # Run a one-off Python command
 run *args:
@@ -144,6 +144,50 @@ deps-add *args:
 # Add a new dev dependency
 deps-add-dev *args:
     uv add --dev {{ args }}
+
+# ============================================================================
+# SMOKE TESTING
+# ============================================================================
+
+# Run structured smoke tests (fast, no pytest)
+smoke *args:
+    uv run python scripts/smoke_test.py {{ args }}
+
+# Run smoke tests with verbose output
+smoke-v:
+    uv run python scripts/smoke_test.py --verbose
+
+# Run specific smoke suite
+smoke-only suite:
+    uv run python scripts/smoke_test.py --only {{ suite }}
+
+# List available smoke suites
+smoke-list:
+    uv run python scripts/smoke_test.py --list
+
+# Run pytest smoke tests
+test-smoke:
+    uv run pytest -m smoke -v --tb=short
+
+# ============================================================================
+# COMBINED WORKFLOWS
+# ============================================================================
+
+# Quick local validation (smoke + unit tests)
+validate: smoke test-unit
+    @echo "✓ Local validation passed"
+
+# Pre-commit check
+pre-commit: format-check lint smoke
+    @echo "✓ Pre-commit checks passed"
+
+# Pre-push check (full CI parity)
+pre-push: format-check lint typecheck smoke test
+    @echo "✓ Ready to push"
+
+# Fast feedback during development
+dev-check: smoke-v
+    @echo "✓ Smoke tests passed - safe to continue"
 
 # ============================================================================
 # UTILITIES
