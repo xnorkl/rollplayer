@@ -51,7 +51,9 @@ def roll(expression: str, reason: str = ""):
         response.raise_for_status()
         result = response.json()["data"]
 
-        console.print(f"🎲 [bold]{expression}[/bold] → [green]{result['total']}[/green]")
+        console.print(
+            f"🎲 [bold]{expression}[/bold] → [green]{result['total']}[/green]"
+        )
         console.print(f"   Rolls: {result['rolls']} + {result['modifier']}")
         if result.get("breakdown"):
             console.print(f"   {result['breakdown']}")

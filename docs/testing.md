@@ -1,4 +1,4 @@
-# Testing Guide
+Testing Guide
 
 Testing procedures for the GM Chatbot REST API and services.
 

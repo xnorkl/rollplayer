@@ -42,7 +42,7 @@ def get_artifact_store() -> ArtifactStore:
             else:
                 # Local development: use system temp directory
                 temp_base = tempfile.gettempdir()
-                campaigns_dir = os.path.join(temp_base, "gm_chatbot", "campaigns")
+                campaigns_dir = str(Path(temp_base) / "gm_chatbot" / "campaigns")
         else:
             campaigns_dir = env_campaigns_dir
         _store = ArtifactStore(campaigns_dir=campaigns_dir)
