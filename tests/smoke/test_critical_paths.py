@@ -5,7 +5,7 @@ Run with: pytest -m smoke
 
 from __future__ import annotations
 
-from datetime import timezone
+from datetime import UTC
 
 import pytest
 
@@ -32,7 +32,7 @@ class TestPlayerSmoke:
 
         assert loaded is not None
         assert loaded.metadata.id == created.metadata.id
-        assert loaded.metadata.created_at.tzinfo == timezone.utc
+        assert loaded.metadata.created_at.tzinfo == UTC
 
 
 class TestCampaignSmoke:

@@ -134,6 +134,7 @@ class SmokeSuite:
 # Test Environment
 # ============================================================================
 
+
 class TestEnvironment:
     """Isolated test environment with temp directories."""
 
@@ -163,6 +164,8 @@ class TestEnvironment:
         """Create fresh service instances."""
         from gm_chatbot.artifacts.store import ArtifactStore
         from gm_chatbot.services.campaign_service import CampaignService
+        from gm_chatbot.services.character_service import CharacterService
+        from gm_chatbot.services.gm_service import GMService
         from gm_chatbot.services.player_service import PlayerService
         from gm_chatbot.services.session_service import SessionService
 
@@ -179,6 +182,8 @@ class TestEnvironment:
             "campaign": CampaignService(store),
             "player": PlayerService(store),
             "session": SessionService(store),
+            "character": CharacterService(store),
+            "gm": GMService(),  # No LLM provider for smoke tests
         }
 
     def fresh_services(self) -> dict:
@@ -212,7 +217,9 @@ player_suite = SmokeSuite(
 def player_create_valid():
     """Create player with valid data."""
     svc = get_svc("player")
-    player = asyncio.run(svc.create_player(username="smoke_user", display_name="Smoke User"))
+    player = asyncio.run(
+        svc.create_player(username="smoke_user", display_name="Smoke User")
+    )
 
     assert player.metadata.id, "Player must have ID"
     assert player.username == "smoke_user", "Username must match"
@@ -279,7 +286,9 @@ def player_roundtrip_preserves_timestamps():
     loaded = asyncio.run(svc.get_player(created.metadata.id))
 
     assert loaded is not None
-    assert loaded.metadata.created_at == created.metadata.created_at, "created_at must match"
+    assert (
+        loaded.metadata.created_at == created.metadata.created_at
+    ), "created_at must match"
     assert loaded.metadata.created_at.tzinfo == timezone.utc, "Must be UTC"
 
 
@@ -312,7 +321,9 @@ def campaign_add_player():
     player = asyncio.run(player_svc.create_player("party_member", "Party Member"))
     campaign = asyncio.run(campaign_svc.create_campaign("Party Quest", "dnd5e"))
 
-    membership = asyncio.run(campaign_svc.add_player(campaign.metadata.id, player.metadata.id))
+    membership = asyncio.run(
+        campaign_svc.add_player(campaign.metadata.id, player.metadata.id)
+    )
 
     assert membership.player_id == player.metadata.id
     assert membership.campaign_id == campaign.metadata.id
@@ -328,7 +339,9 @@ def campaign_add_player_as_gm():
     gm = asyncio.run(player_svc.create_player("game_master", "Game Master"))
     campaign = asyncio.run(campaign_svc.create_campaign("GM Quest", "dnd5e"))
 
-    membership = asyncio.run(campaign_svc.add_player(campaign.metadata.id, gm.metadata.id, role="gm"))
+    membership = asyncio.run(
+        campaign_svc.add_player(campaign.metadata.id, gm.metadata.id, role="gm")
+    )
 
     assert membership.role == "gm"
 
@@ -387,7 +400,9 @@ def session_create():
     gm = asyncio.run(player_svc.create_player("session_gm", "Session GM"))
     campaign = asyncio.run(campaign_svc.create_campaign("Session Test", "dnd5e"))
 
-    session = asyncio.run(session_svc.create_session(campaign.metadata.id, gm.metadata.id))
+    session = asyncio.run(
+        session_svc.create_session(campaign.metadata.id, gm.metadata.id)
+    )
 
     assert session.campaign_id == campaign.metadata.id
     assert session.status == "active"
@@ -422,9 +437,13 @@ def session_end():
 
     gm = asyncio.run(player_svc.create_player("end_session_gm", "End Session GM"))
     campaign = asyncio.run(campaign_svc.create_campaign("Ending Quest", "dnd5e"))
-    session = asyncio.run(session_svc.create_session(campaign.metadata.id, gm.metadata.id))
+    session = asyncio.run(
+        session_svc.create_session(campaign.metadata.id, gm.metadata.id)
+    )
 
-    ended = asyncio.run(session_svc.end_session(campaign.metadata.id, session.metadata.id))
+    ended = asyncio.run(
+        session_svc.end_session(campaign.metadata.id, session.metadata.id)
+    )
 
     assert ended.status == "ended"
     assert ended.ended_at is not None
@@ -440,10 +459,14 @@ def session_increment_number():
     gm = asyncio.run(player_svc.create_player("increment_gm", "Increment GM"))
     campaign = asyncio.run(campaign_svc.create_campaign("Counting Quest", "dnd5e"))
 
-    session1 = asyncio.run(session_svc.create_session(campaign.metadata.id, gm.metadata.id))
+    session1 = asyncio.run(
+        session_svc.create_session(campaign.metadata.id, gm.metadata.id)
+    )
     asyncio.run(session_svc.end_session(campaign.metadata.id, session1.metadata.id))
 
-    session2 = asyncio.run(session_svc.create_session(campaign.metadata.id, gm.metadata.id))
+    session2 = asyncio.run(
+        session_svc.create_session(campaign.metadata.id, gm.metadata.id)
+    )
 
     assert session1.session_number == 1
     assert session2.session_number == 2
@@ -479,7 +502,9 @@ def integration_full_game_setup():
     )
 
     # Add participants
-    asyncio.run(campaign_svc.add_player(campaign.metadata.id, gm.metadata.id, role="gm"))
+    asyncio.run(
+        campaign_svc.add_player(campaign.metadata.id, gm.metadata.id, role="gm")
+    )
     asyncio.run(campaign_svc.add_player(campaign.metadata.id, player1.metadata.id))
     asyncio.run(campaign_svc.add_player(campaign.metadata.id, player2.metadata.id))
 
@@ -488,11 +513,15 @@ def integration_full_game_setup():
     assert len(members) == 3
 
     # Start session
-    session = asyncio.run(session_svc.create_session(campaign.metadata.id, gm.metadata.id))
+    session = asyncio.run(
+        session_svc.create_session(campaign.metadata.id, gm.metadata.id)
+    )
     assert session.status == "active"
 
     # End session
-    ended = asyncio.run(session_svc.end_session(campaign.metadata.id, session.metadata.id))
+    ended = asyncio.run(
+        session_svc.end_session(campaign.metadata.id, session.metadata.id)
+    )
     assert ended.status == "ended"
 
 
@@ -509,7 +538,9 @@ def integration_datetime_consistency():
     player = asyncio.run(player_svc.create_player("tz_test", "Timezone Test"))
     campaign = asyncio.run(campaign_svc.create_campaign("UTC Quest", "dnd5e"))
     asyncio.run(campaign_svc.add_player(campaign.metadata.id, player.metadata.id))
-    session = asyncio.run(session_svc.create_session(campaign.metadata.id, player.metadata.id))
+    session = asyncio.run(
+        session_svc.create_session(campaign.metadata.id, player.metadata.id)
+    )
 
     # Verify all timestamps are UTC
     assert player.metadata.created_at.tzinfo == timezone.utc
@@ -534,6 +565,68 @@ def integration_data_isolation():
     assert campaigns_dir.exists(), "Directory must exist"
 
 
+@integration_suite.test
+def integration_player_character_chat_flow():
+    """Complete flow: player creation, campaign, membership, character, and GM chat."""
+    from gm_chatbot.models.character import CharacterIdentity
+    from gm_chatbot.models.chat import ChatMessage
+
+    player_svc = get_svc("player")
+    campaign_svc = get_svc("campaign")
+    character_svc = get_svc("character")
+    gm_svc = get_svc("gm")
+
+    # 1. Create a player
+    player = asyncio.run(
+        player_svc.create_player(username="hero_player", display_name="Hero Player")
+    )
+    assert player.metadata.id, "Player must have ID"
+    assert player.username == "hero_player"
+
+    # 2. Create a campaign
+    campaign = asyncio.run(
+        campaign_svc.create_campaign(name="Hero Quest", rule_system="shadowdark")
+    )
+    assert campaign.metadata.id, "Campaign must have ID"
+    assert campaign.name == "Hero Quest"
+
+    # 3. Add player to campaign
+    membership = asyncio.run(
+        campaign_svc.add_player(campaign.metadata.id, player.metadata.id)
+    )
+    assert membership.player_id == player.metadata.id
+    assert membership.campaign_id == campaign.metadata.id
+    assert membership.role == "player"
+
+    # 4. Create a character for the player
+    character = asyncio.run(
+        character_svc.create_character(
+            campaign_id=campaign.metadata.id,
+            character_type="player_character",
+            name="Test Hero",
+            identity=CharacterIdentity(name="Test Hero", level=3).model_dump(),
+        )
+    )
+    assert character.metadata.id, "Character must have ID"
+    assert character.identity.name == "Test Hero"
+    assert character.character_type == "player_character"
+    assert character.identity.level == 3
+
+    # 5. Ask GM to describe the character
+    chat_message = ChatMessage(
+        message="Can you describe my character Test Hero?",
+        campaign_id=campaign.metadata.id,
+        sender_id=player.metadata.id,
+        sender_type="player",
+    )
+    response = asyncio.run(gm_svc.handle_message(chat_message, campaign.metadata.id))
+
+    # Verify response is returned (even if AI is not available, should return a message)
+    assert response is not None, "GM should return a response"
+    assert isinstance(response, str), "Response should be a string"
+    assert len(response) > 0, "Response should not be empty"
+
+
 # ============================================================================
 # Test Registry
 # ============================================================================
@@ -550,6 +643,7 @@ ALL_SUITES: dict[str, SmokeSuite] = {
 # CLI
 # ============================================================================
 
+
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
@@ -565,7 +659,8 @@ Examples:
     )
 
     parser.add_argument(
-        "--verbose", "-v",
+        "--verbose",
+        "-v",
         action="store_true",
         help="Show full tracebacks on failure",
     )
@@ -577,7 +672,8 @@ Examples:
     )
 
     parser.add_argument(
-        "--list", "-l",
+        "--list",
+        "-l",
         action="store_true",
         dest="list_suites",
         help="List available suites and exit",
