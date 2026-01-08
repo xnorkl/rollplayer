@@ -62,7 +62,7 @@ jobs:
       - name: Get app name
         id: get-app-name
         run: |
-          APP_NAME=$(grep '^app =' infrastructure/fly.toml | cut -d'"' -f2)
+          APP_NAME=$(grep '^app =' infrastructure/fly.toml | head -n1 | cut -d'"' -f2 | tr -d '\n\r' | xargs)
           echo "app_name=$APP_NAME" >> $GITHUB_OUTPUT
 
   deploy:
