@@ -1,0 +1,772 @@
+# ADR 0004: CI Pipeline Restructuring
+
+## Status
+
+Accepted
+
+## Context
+
+This ADR documents the proposed restructuring of the GM Chatbot CI pipeline to improve feedback speed, test isolation, and deployment reliability. The current pipeline runs all tests (unit and integration) as a single sequential workflow on every push and pull request.
+
+### Current State Issues
+
+1. **Slow Feedback Loop**: Developers wait for full test suite (~3-5 min) on simple changes
+2. **Unnecessary Resource Consumption**: Integration tests run on feature branches where they provide limited value
+3. **Undifferentiated Coverage Metrics**: Cannot distinguish unit vs integration coverage in Codecov reports
+4. **Deployment Gate Ambiguity**: Single workflow completion doesn't distinguish between test types
+
+### Current CI/CD Architecture
+
+The existing pipeline consists of:
+
+- **Test Workflow** (`.github/workflows/test.yml`): Runs on all pushes and PRs, executes unit and integration tests sequentially
+- **Deploy Workflow** (`.github/workflows/deploy-fly.yml`): Triggered by `workflow_run` on test completion for main/master branches
+
+### Scope Constraints
+
+The following items are explicitly in scope:
+
+- Split test action into unit and integration tests
+- Employ Codecov flags for unit and integration tests
+- Unit tests must run on any pushed commit
+- Integration tests must run on any merge
+- Deploy must run only if all tests have passed
+
+The following items are explicitly deferred:
+
+- Security controls (SAST, dependency scanning, secrets detection)
+- Fitness functions (performance benchmarks, architectural conformance)
+
+## Decision
+
+Restructure the CI pipeline to:
+
+1. **Separate Unit Test Workflow**: Independent workflow triggered on all pushes and pull requests
+2. **Separate Integration Test Workflow**: Workflow triggered only on main/master after unit tests pass
+3. **Codecov Flag Integration**: Distinct coverage flags for unit and integration test suites
+4. **Sequential Deployment Gate**: Deploy workflow depends on integration test completion
+5. **Workflow Orchestration**: Use `workflow_run` triggers to ensure proper sequencing
+
+## Architecture Overview
+
+### High-Level Pipeline Architecture
+
+```mermaid
+graph TB
+    subgraph Triggers["Event Triggers"]
+        FeaturePush[Feature Branch Push]
+        MainPush[Main Branch Push/Merge]
+        PR[Pull Request]
+    end
+
+    subgraph UnitWorkflow["Unit Tests Workflow"]
+        UnitCheckout[Checkout Code]
+        UnitSetup[Setup Python Environment]
+        UnitRun[Run Unit Tests]
+        UnitCoverage[Upload Coverage<br/>flag: unit]
+    end
+
+    subgraph IntegrationWorkflow["Integration Tests Workflow"]
+        IntegrationGate[Verify Unit Tests Passed]
+        IntegrationCheckout[Checkout Code]
+        IntegrationSetup[Setup Python Environment]
+        IntegrationRun[Run Integration Tests]
+        IntegrationCoverage[Upload Coverage<br/>flag: integration]
+    end
+
+    subgraph DeployWorkflow["Deploy Workflow"]
+        DeployGate[Verify Integration Tests Passed]
+        Build[Build and Validate]
+        Deploy[Deploy to Fly.io]
+        Verify[Verify Deployment]
+    end
+
+    FeaturePush --> UnitCheckout
+    PR --> UnitCheckout
+    MainPush --> UnitCheckout
+
+    UnitCheckout --> UnitSetup
+    UnitSetup --> UnitRun
+    UnitRun --> UnitCoverage
+
+    UnitCoverage -->|workflow_run<br/>main/master only| IntegrationGate
+    IntegrationGate -->|success| IntegrationCheckout
+    IntegrationCheckout --> IntegrationSetup
+    IntegrationSetup --> IntegrationRun
+    IntegrationRun --> IntegrationCoverage
+
+    IntegrationCoverage -->|workflow_run| DeployGate
+    DeployGate -->|success| Build
+    Build --> Deploy
+    Deploy --> Verify
+```
+
+### Workflow Trigger Flow
+
+```mermaid
+graph LR
+    subgraph FeatureBranch["Feature Branch"]
+        FPush[Push] --> FUnit[Unit Tests]
+        FUnit --> FComplete[Complete]
+    end
+
+    subgraph MainBranch["Main Branch"]
+        MPush[Push/Merge] --> MUnit[Unit Tests]
+        MUnit -->|success| MIntegration[Integration Tests]
+        MIntegration -->|success| MDeploy[Deploy]
+    end
+
+    subgraph PRFlow["Pull Request"]
+        PRCreate[PR Created/Updated] --> PRUnit[Unit Tests]
+        PRUnit --> PRComplete[PR Feedback]
+    end
+```
+
+### Codecov Integration Architecture
+
+```mermaid
+graph TB
+    subgraph Tests["Test Execution"]
+        UnitTests[Unit Tests<br/>tests/unit/]
+        IntegrationTests[Integration Tests<br/>tests/integration/]
+    end
+
+    subgraph Coverage["Coverage Reports"]
+        UnitXML[coverage-unit.xml]
+        IntegrationXML[coverage-integration.xml]
+    end
+
+    subgraph Codecov["Codecov Platform"]
+        UnitFlag[Flag: unit<br/>carryforward: true]
+        IntegrationFlag[Flag: integration<br/>carryforward: true]
+        Combined[Combined Coverage Report]
+    end
+
+    UnitTests --> UnitXML
+    IntegrationTests --> IntegrationXML
+
+    UnitXML --> UnitFlag
+    IntegrationXML --> IntegrationFlag
+
+    UnitFlag --> Combined
+    IntegrationFlag --> Combined
+```
+
+## Key Architectural Decisions
+
+### 1. Separate Unit and Integration Test Workflows
+
+**Decision**: Split the monolithic test workflow into two independent workflows with distinct trigger conditions.
+
+**Rationale**:
+
+- Unit tests provide rapid feedback on code correctness
+- Integration tests validate system behavior but are slower
+- Feature branch development doesn't require full integration validation
+- Separate workflows enable parallel development and faster iteration
+
+**Implementation**:
+
+- Unit tests in `.github/workflows/unit-tests.yml`
+- Integration tests in `.github/workflows/integration-tests.yml`
+- Unit tests output to `coverage-unit.xml` and `junit-unit.xml`
+- Integration tests output to `coverage-integration.xml` and `junit-integration.xml`
+
+**Consequences**:
+
+- **Positive**: Faster feedback on feature branches, reduced CI resource consumption
+- **Negative**: Additional workflow files to maintain
+- **Neutral**: Requires understanding of workflow_run trigger semantics
+
+### 2. Differentiated Trigger Conditions
+
+**Decision**: Unit tests trigger on all pushes and PRs; integration tests trigger only on main/master branches after unit tests pass.
+
+**Rationale**:
+
+- Every commit deserves basic validation via unit tests
+- Integration tests are most valuable when code is ready for deployment
+- Reduces unnecessary integration test runs on work-in-progress branches
+- Maintains deployment safety by requiring full test suite on main
+
+**Implementation**:
+
+- Unit tests: `on: [push, pull_request, workflow_dispatch]`
+- Integration tests: `on: workflow_run` with branch filter for main/master
+- Integration tests include gate job to verify unit test success
+
+**Consequences**:
+
+- **Positive**: Optimal resource utilization, faster feature development
+- **Negative**: Integration issues may be discovered later in the workflow
+- **Neutral**: Developers must understand when integration tests run
+
+### 3. Codecov Flag Configuration
+
+**Decision**: Use Codecov flags to separate unit and integration test coverage with carryforward enabled.
+
+**Rationale**:
+
+- Enables differentiated coverage analysis by test type
+- Carryforward prevents coverage regression when only one test type runs
+- Provides visibility into which code paths each test type covers
+- Supports coverage-based PR comments with flag-specific details
+
+**Implementation**:
+
+- `codecov.yml` configuration file in repository root
+- Unit tests upload with `flags: unit`
+- Integration tests upload with `flags: integration`
+- Both flags configured with `carryforward: true` and `after_n_builds: 1`
+
+**Consequences**:
+
+- **Positive**: Granular coverage insights, better test gap identification
+- **Negative**: Requires Codecov configuration management
+- **Neutral**: Coverage reports may show partial data during workflow execution
+
+### 4. Sequential Deployment Gate
+
+**Decision**: Deploy workflow triggers on integration test workflow completion, not unit test completion.
+
+**Rationale**:
+
+- Ensures full test suite passes before deployment
+- Integration tests implicitly verify unit tests passed (via workflow chain)
+- Single deployment trigger point simplifies workflow management
+- Maintains existing deployment safety guarantees
+
+**Implementation**:
+
+- Deploy workflow: `on: workflow_run: workflows: ["Integration Tests"]`
+- Gate job verifies `github.event.workflow_run.conclusion == 'success'`
+- Existing deploy steps remain unchanged
+
+**Consequences**:
+
+- **Positive**: High deployment confidence, clear workflow dependency chain
+- **Negative**: Slightly longer time from merge to deploy
+- **Neutral**: Deployment blocked if any test type fails (by design)
+
+### 5. Workflow Dispatch Support
+
+**Decision**: Include `workflow_dispatch` trigger on both test workflows for manual execution.
+
+**Rationale**:
+
+- Enables debugging of workflow issues without code changes
+- Supports re-running tests after transient failures
+- Integration tests can be manually triggered with unit test skip option
+- Useful for validating workflow changes
+
+**Implementation**:
+
+- Unit tests: `workflow_dispatch` with no inputs
+- Integration tests: `workflow_dispatch` with optional `skip_unit_check` input
+- Deploy workflow does not support manual trigger (maintains safety)
+
+**Consequences**:
+
+- **Positive**: Operational flexibility, easier debugging
+- **Negative**: Potential for bypassing unit test gate (requires explicit flag)
+- **Neutral**: Manual triggers are auditable in GitHub Actions UI
+
+## Data Flow
+
+### Unit Test Execution Flow
+
+```mermaid
+sequenceDiagram
+    participant GitHub
+    participant Runner
+    participant Pytest
+    participant Codecov
+
+    GitHub->>Runner: Push/PR event triggers workflow
+    Runner->>Runner: Checkout code
+    Runner->>Runner: Setup Python 3.12 with uv
+    Runner->>Runner: Install dependencies (cached)
+    Runner->>Pytest: Run tests/unit/ with coverage
+    Pytest-->>Runner: coverage-unit.xml, junit-unit.xml
+    Runner->>GitHub: Upload artifacts (7 day retention)
+    Runner->>Codecov: Upload coverage (flag: unit)
+    Runner->>Codecov: Upload test results
+    Codecov-->>GitHub: Coverage comment on PR
+```
+
+### Integration Test Execution Flow
+
+```mermaid
+sequenceDiagram
+    participant GitHub
+    participant UnitWorkflow
+    participant IntegrationRunner
+    participant Pytest
+    participant Codecov
+
+    UnitWorkflow->>GitHub: Workflow completed (success)
+    GitHub->>IntegrationRunner: workflow_run trigger (main/master)
+    IntegrationRunner->>IntegrationRunner: Verify unit tests passed
+    alt Unit tests failed
+        IntegrationRunner-->>GitHub: Exit with error
+    else Unit tests passed
+        IntegrationRunner->>IntegrationRunner: Checkout code
+        IntegrationRunner->>IntegrationRunner: Setup Python 3.12 with uv
+        IntegrationRunner->>IntegrationRunner: Install dependencies (cached)
+        IntegrationRunner->>Pytest: Run tests/integration/ with coverage
+        Pytest-->>IntegrationRunner: coverage-integration.xml, junit-integration.xml
+        IntegrationRunner->>GitHub: Upload artifacts
+        IntegrationRunner->>Codecov: Upload coverage (flag: integration)
+        IntegrationRunner->>Codecov: Upload test results
+    end
+```
+
+### Deployment Gate Flow
+
+```mermaid
+sequenceDiagram
+    participant IntegrationWorkflow
+    participant GitHub
+    participant DeployRunner
+    participant FlyIO
+
+    IntegrationWorkflow->>GitHub: Workflow completed
+    GitHub->>DeployRunner: workflow_run trigger
+    DeployRunner->>DeployRunner: Check workflow conclusion
+    alt Integration tests failed
+        DeployRunner-->>GitHub: Exit with error, no deployment
+    else Integration tests passed
+        DeployRunner->>DeployRunner: Log: Unit tests passed (verified by integration)
+        DeployRunner->>DeployRunner: Log: Integration tests passed
+        DeployRunner->>DeployRunner: Build and validate
+        DeployRunner->>FlyIO: Deploy application
+        FlyIO-->>DeployRunner: Deployment status
+        DeployRunner->>DeployRunner: Verify deployment health
+        DeployRunner-->>GitHub: Deployment complete
+    end
+```
+
+## File Structure
+
+### New Files
+
+- `.github/workflows/unit-tests.yml`: Unit test workflow definition
+- `.github/workflows/integration-tests.yml`: Integration test workflow definition
+- `codecov.yml`: Codecov configuration with flag definitions
+
+### Modified Files
+
+- `.github/workflows/deploy-fly.yml`: Updated trigger to depend on Integration Tests workflow
+
+### Removed Files
+
+- `.github/workflows/test.yml`: Legacy monolithic test workflow (after migration)
+
+### Workflow File Locations
+
+```
+.github/
+└── workflows/
+    ├── unit-tests.yml           # NEW: Unit test workflow
+    ├── integration-tests.yml    # NEW: Integration test workflow
+    ├── deploy-fly.yml           # MODIFIED: Updated trigger
+    └── test.yml                 # REMOVED: After migration complete
+
+codecov.yml                      # NEW: Codecov flag configuration
+```
+
+## Implementation Specifications
+
+### Unit Tests Workflow
+
+```yaml
+# .github/workflows/unit-tests.yml
+name: Unit Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  unit-test:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v1
+
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+
+      - name: Cache Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            .venv
+          key: ${{ runner.os }}-uv-3.12-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-3.12-
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Run unit tests with coverage
+        run: |
+          uv run pytest tests/unit/ \
+            -v \
+            --cov=gm_chatbot \
+            --cov-report=xml:coverage-unit.xml \
+            --cov-report=term \
+            --junitxml=junit-unit.xml
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-unit
+          path: coverage-unit.xml
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Upload test results artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-unit
+          path: junit-unit.xml
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: junit-unit.xml
+          report_type: test_results
+          flags: unit
+          name: unit-test-results
+
+      - name: Upload coverage to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage-unit.xml
+          report_type: coverage
+          flags: unit
+          name: unit-coverage
+          fail_ci_if_error: false
+```
+
+### Integration Tests Workflow
+
+```yaml
+# .github/workflows/integration-tests.yml
+name: Integration Tests
+
+on:
+  workflow_run:
+    workflows: ["Unit Tests"]
+    types:
+      - completed
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      skip_unit_check:
+        description: "Skip unit test verification (use for debugging only)"
+        required: false
+        default: "false"
+        type: boolean
+
+jobs:
+  verify-unit-tests:
+    name: Verify Unit Tests Passed
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' && 
+      github.event.inputs.skip_unit_check == 'true' ||
+      github.event.workflow_run.conclusion == 'success'
+    outputs:
+      proceed: ${{ steps.check.outputs.proceed }}
+    steps:
+      - name: Check unit test status
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Manual trigger - proceeding"
+            echo "proceed=true" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event.workflow_run.conclusion }}" == "success" ]; then
+            echo "Unit tests passed - proceeding"
+            echo "proceed=true" >> $GITHUB_OUTPUT
+          else
+            echo "::error::Unit tests did not pass. Integration tests cancelled."
+            echo "proceed=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+  integration-test:
+    name: Run Integration Tests
+    runs-on: ubuntu-latest
+    needs: verify-unit-tests
+    if: needs.verify-unit-tests.outputs.proceed == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v1
+
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+
+      - name: Cache Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            .venv
+          key: ${{ runner.os }}-uv-3.12-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-3.12-
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Run integration tests with coverage
+        run: |
+          uv run pytest tests/integration/ \
+            -v \
+            --cov=gm_chatbot \
+            --cov-report=xml:coverage-integration.xml \
+            --cov-report=term \
+            --junitxml=junit-integration.xml
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-integration
+          path: coverage-integration.xml
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Upload test results artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-integration
+          path: junit-integration.xml
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: junit-integration.xml
+          report_type: test_results
+          flags: integration
+          name: integration-test-results
+
+      - name: Upload coverage to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage-integration.xml
+          report_type: coverage
+          flags: integration
+          name: integration-coverage
+          fail_ci_if_error: false
+```
+
+### Deploy Workflow Updates
+
+```yaml
+# .github/workflows/deploy-fly.yml (updated trigger section only)
+name: Deploy to Fly.io
+
+on:
+  workflow_run:
+    workflows: ["Integration Tests"]
+    types:
+      - completed
+    branches:
+      - main
+      - master
+
+jobs:
+  check-and-deploy:
+    name: Verify Tests and Deploy
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: Verify Integration Tests Passed
+        run: |
+          if [ "${{ github.event.workflow_run.conclusion }}" != "success" ]; then
+            echo "::error::Integration test workflow failed. Deployment cancelled."
+            exit 1
+          fi
+          echo "✓ Integration tests passed"
+          echo "✓ Unit tests passed (verified by integration workflow)"
+          echo "Proceeding with deployment."
+
+  # ... remainder of existing deploy workflow unchanged
+```
+
+### Codecov Configuration
+
+```yaml
+# codecov.yml
+codecov:
+  require_ci_to_pass: true
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+    patch:
+      default:
+        target: auto
+        threshold: 1%
+
+flags:
+  unit:
+    paths:
+      - src/gm_chatbot/
+    carryforward: true
+    after_n_builds: 1
+  integration:
+    paths:
+      - src/gm_chatbot/
+    carryforward: true
+    after_n_builds: 1
+
+comment:
+  layout: "reach,diff,flags,tree"
+  behavior: default
+  require_changes: false
+```
+
+## Acceptance Criteria
+
+### Functional Requirements
+
+| ID    | Requirement                                           | Verification Method                                                               |
+| ----- | ----------------------------------------------------- | --------------------------------------------------------------------------------- |
+| FR-01 | Unit tests execute on every push to any branch        | Push to feature branch, verify workflow runs                                      |
+| FR-02 | Unit tests execute on pull request creation/update    | Create PR, verify workflow runs                                                   |
+| FR-03 | Integration tests execute only on push to main/master | Push to main, verify workflow runs; push to feature, verify workflow does NOT run |
+| FR-04 | Integration tests wait for unit test completion       | Merge to main, verify integration waits for unit workflow                         |
+| FR-05 | Integration tests fail if unit tests fail             | Fail unit tests on main, verify integration does not proceed                      |
+| FR-06 | Deploy executes only after integration tests succeed  | Merge to main with passing tests, verify deploy runs                              |
+| FR-07 | Deploy does not execute if integration tests fail     | Fail integration tests, verify deploy does not run                                |
+| FR-08 | Codecov displays separate unit coverage flag          | Check Codecov dashboard for `unit` flag                                           |
+| FR-09 | Codecov displays separate integration coverage flag   | Check Codecov dashboard for `integration` flag                                    |
+| FR-10 | Coverage artifacts preserved for 7 days               | Verify artifact retention in Actions UI                                           |
+
+### Non-Functional Requirements
+
+| ID     | Requirement                               | Target                       | Verification                             |
+| ------ | ----------------------------------------- | ---------------------------- | ---------------------------------------- |
+| NFR-01 | Unit test workflow duration               | < 90 seconds                 | Monitor workflow timing                  |
+| NFR-02 | Integration test workflow duration        | < 180 seconds                | Monitor workflow timing                  |
+| NFR-03 | Total pipeline duration (merge to deploy) | < 10 minutes                 | Monitor end-to-end timing                |
+| NFR-04 | Workflow idempotency                      | Re-runs produce same results | Trigger workflow_dispatch multiple times |
+
+## Consequences
+
+### Positive
+
+1. **Faster Feedback**: Unit tests provide rapid validation on all commits
+2. **Resource Efficiency**: Integration tests only run when necessary (main branch)
+3. **Granular Coverage**: Codecov flags enable differentiated coverage analysis
+4. **Clear Workflow Chain**: Sequential dependencies ensure deployment safety
+5. **Operational Flexibility**: Manual triggers support debugging and re-runs
+6. **Maintained Safety**: Deployment still requires full test suite to pass
+
+### Negative
+
+1. **Workflow Complexity**: Three workflows instead of one to maintain
+2. **Delayed Integration Feedback**: Feature branches don't run integration tests
+3. **Configuration Overhead**: Additional Codecov configuration required
+4. **Learning Curve**: Team must understand workflow_run trigger semantics
+
+### Neutral
+
+1. **Artifact Management**: Separate artifacts per workflow (vs. combined)
+2. **Coverage Reporting**: Flag-based reporting changes Codecov dashboard layout
+3. **Deployment Timing**: Slightly longer merge-to-deploy time due to sequential workflows
+4. **Manual Trigger Audit**: All manual workflow runs are logged in GitHub Actions
+
+## Migration Plan
+
+### Phase 1: Preparation (Day 1)
+
+1. Create `codecov.yml` configuration file
+2. Create `unit-tests.yml` workflow (disabled via branch filter)
+3. Create `integration-tests.yml` workflow (disabled via branch filter)
+4. Validate YAML syntax with `act` or similar tool
+
+### Phase 2: Parallel Deployment (Day 2)
+
+1. Enable `unit-tests.yml` alongside existing test workflow
+2. Verify unit tests run correctly on push
+3. Verify Codecov receives flagged coverage
+4. Monitor for issues (24 hours)
+
+### Phase 3: Integration Cutover (Day 3)
+
+1. Enable `integration-tests.yml`
+2. Update `deploy-fly.yml` trigger to use Integration Tests
+3. Verify workflow chain: Unit → Integration → Deploy
+4. Disable legacy `test.yml` workflow
+
+### Phase 4: Cleanup (Day 4)
+
+1. Remove legacy `test.yml` workflow file
+2. Update documentation (ADR, README)
+3. Notify team of changes
+
+### Rollback Procedure
+
+If issues are detected:
+
+1. Re-enable legacy `test.yml`
+2. Revert `deploy-fly.yml` to trigger on `test.yml`
+3. Disable new workflows
+4. Investigate and remediate
+
+## Future Considerations
+
+Potential improvements for future ADRs:
+
+1. **Test Parallelization**: Split unit tests across multiple runners for faster execution
+2. **Matrix Testing**: Expand Python version coverage (3.11, 3.13)
+3. **Security Scanning**: Add CodeQL, Dependabot, secrets scanning workflows
+4. **Performance Benchmarks**: Track test duration trends as fitness functions
+5. **Flaky Test Detection**: Identify and quarantine unstable tests
+6. **PR Status Checks**: Configure required status checks for branch protection
+7. **Caching Optimization**: Explore more aggressive dependency caching strategies
+
+## References
+
+- [ADR 0003: Current Architecture State](docs/adr/0003-current-architecture-state.md) - Current CI/CD documentation
+- [GitHub Actions: workflow_run](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_run) - Workflow trigger documentation
+- [Codecov Flags Documentation](https://docs.codecov.com/docs/flags) - Coverage flag configuration
+- [GitHub Actions: Caching](https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows) - Dependency caching strategies

@@ -1,0 +1,120 @@
+name: Integration Tests
+
+on:
+    workflow_run:
+        workflows: ["Unit Tests"]
+        types:
+            - completed
+        branches:
+            - main
+            - master
+    workflow_dispatch:
+        inputs:
+            skip_unit_check:
+                description: "Skip unit test verification"
+                required: false
+                default: "false"
+                type: boolean
+
+jobs:
+    verify-unit-tests:
+        name: Verify Unit Tests Passed
+        runs-on: ubuntu-latest
+        if: >
+            github.event_name == 'workflow_dispatch' && 
+            github.event.inputs.skip_unit_check == 'true' ||
+            github.event.workflow_run.conclusion == 'success'
+        outputs:
+            proceed: ${{ steps.check.outputs.proceed }}
+        steps:
+            - name: Check unit test status
+              id: check
+              run: |
+                  if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ github.event.inputs.skip_unit_check }}" == "true" ]; then
+                    echo "Manual trigger with skip_unit_check=true - proceeding"
+                    echo "proceed=true" >> $GITHUB_OUTPUT
+                  elif [ "${{ github.event.workflow_run.conclusion }}" == "success" ]; then
+                    echo "Unit tests passed - proceeding"
+                    echo "proceed=true" >> $GITHUB_OUTPUT
+                  else
+                    echo "::error::Unit tests did not pass. Integration tests cancelled."
+                    echo "proceed=false" >> $GITHUB_OUTPUT
+                    exit 1
+                  fi
+
+    integration-test:
+        name: Run Integration Tests
+        runs-on: ubuntu-latest
+        needs: verify-unit-tests
+        if: needs.verify-unit-tests.outputs.proceed == 'true'
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+              with:
+                  ref: ${{ github.event.workflow_run.head_branch || github.ref }}
+
+            - name: Install uv
+              uses: astral-sh/setup-uv@v1
+
+            - name: Set up Python 3.12
+              run: uv python install 3.12
+
+            - name: Cache Python dependencies
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.cache/uv
+                      .venv
+                  key: ${{ runner.os }}-uv-3.12-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+                  restore-keys: |
+                      ${{ runner.os }}-uv-3.12-
+
+            - name: Install dependencies
+              run: uv sync --dev
+
+            - name: Run integration tests with coverage
+              run: |
+                  uv run pytest tests/integration/ \
+                    -v \
+                    --cov=gm_chatbot \
+                    --cov-report=xml:coverage-integration.xml \
+                    --cov-report=term \
+                    --junitxml=junit-integration.xml
+
+            - name: Upload coverage artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: coverage-integration
+                  path: coverage-integration.xml
+                  retention-days: 7
+                  if-no-files-found: warn
+
+            - name: Upload test results artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: junit-integration
+                  path: junit-integration.xml
+                  retention-days: 7
+                  if-no-files-found: warn
+
+            - name: Upload test results to Codecov
+              if: ${{ !cancelled() }}
+              uses: codecov/codecov-action@v5
+              with:
+                  token: ${{ secrets.CODECOV_TOKEN }}
+                  files: junit-integration.xml
+                  report_type: test_results
+                  flags: integration
+                  name: integration-test-results
+
+            - name: Upload coverage to Codecov
+              if: ${{ !cancelled() }}
+              uses: codecov/codecov-action@v5
+              with:
+                  token: ${{ secrets.CODECOV_TOKEN }}
+                  files: coverage-integration.xml
+                  report_type: coverage
+                  flags: integration
+                  name: integration-coverage
+                  fail_ci_if_error: false
