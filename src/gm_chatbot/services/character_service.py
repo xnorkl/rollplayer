@@ -1,24 +1,42 @@
 """Character service for character sheet management."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from ..artifacts.store import ArtifactStore
 from ..artifacts.validator import ArtifactValidator
 from ..models.character import CharacterSheet
 
+if TYPE_CHECKING:
+    from ..services.campaign_service import CampaignService
+
 
 class CharacterService:
     """Service for managing character sheets."""
 
-    def __init__(self, store: ArtifactStore | None = None):
+    def __init__(
+        self,
+        store: ArtifactStore | None = None,
+        campaign_service: "CampaignService | None" = None,
+    ):
         """
         Initialize character service.
 
         Args:
             store: Optional artifact store (creates default if not provided)
+            campaign_service: Optional campaign service (creates default if not provided)
         """
         self.store = store or ArtifactStore()
         self.validator = ArtifactValidator()
+        # Lazy import to avoid circular dependency
+        if campaign_service is None:
+            from ..services.campaign_service import CampaignService
+
+            self.campaign_service = CampaignService(self.store)
+        else:
+            self.campaign_service = campaign_service
 
     async def create_character(
         self,
@@ -69,7 +87,9 @@ class CharacterService:
         filename = f"{prefix}_{name.lower().replace(' ', '_')}.yaml"
 
         # Save character in characters subdirectory
-        self.store.save_artifact(character, campaign_id, "character", f"characters/{filename}")
+        self.store.save_artifact(
+            character, campaign_id, "character", f"characters/{filename}"
+        )
 
         return character
 
@@ -94,7 +114,9 @@ class CharacterService:
         # Find character file by ID
         characters_dir = self.store.get_campaign_dir(campaign_id) / "characters"
         if not characters_dir.exists():
-            raise FileNotFoundError(f"Characters directory not found for campaign {campaign_id}")
+            raise FileNotFoundError(
+                f"Characters directory not found for campaign {campaign_id}"
+            )
 
         for char_file in characters_dir.glob("*.yaml"):
             try:
@@ -106,7 +128,38 @@ class CharacterService:
             except Exception:
                 continue
 
-        raise FileNotFoundError(f"Character {character_id} not found in campaign {campaign_id}")
+        raise FileNotFoundError(
+            f"Character {character_id} not found in campaign {campaign_id}"
+        )
+
+    async def get_character_by_player(
+        self,
+        campaign_id: str,
+        player_id: str,
+    ) -> CharacterSheet | None:
+        """
+        Retrieve a player's character in a campaign.
+
+        Looks up the player's membership to find their linked character_id,
+        then loads and returns the character.
+
+        Args:
+            campaign_id: Campaign identifier
+            player_id: Player identifier
+
+        Returns:
+            CharacterSheet if player has a character, None otherwise
+
+        Raises:
+            FileNotFoundError: If membership not found
+        """
+        # Get membership to find character_id
+        membership = await self.campaign_service.get_membership(campaign_id, player_id)
+
+        if not membership or not membership.character_id:
+            return None
+
+        return await self.get_character(campaign_id, membership.character_id)
 
     async def get_character_by_filename(
         self,
@@ -129,7 +182,9 @@ class CharacterService:
             f"characters/{filename}",
         )  # type: ignore[return-value]
 
-    async def update_character(self, campaign_id: str, character: CharacterSheet) -> CharacterSheet:
+    async def update_character(
+        self, campaign_id: str, character: CharacterSheet
+    ) -> CharacterSheet:
         """
         Update a character.
 
@@ -262,6 +317,8 @@ class CharacterService:
         filename = f"{prefix}_{character.identity.name.lower().replace(' ', '_')}.yaml"
 
         # Save character
-        self.store.save_artifact(character, campaign_id, "character", f"characters/{filename}")
+        self.store.save_artifact(
+            character, campaign_id, "character", f"characters/{filename}"
+        )
 
         return character
