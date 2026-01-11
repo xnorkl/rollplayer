@@ -92,20 +92,29 @@ def setup_character_commands(bot: DiscordBot) -> None:
             if not campaign_id:
                 raise ValueError(
                     "This channel is not bound to a campaign. "
-                    "Ask a GM to run `/campaign bind` first."
+                    "Ask a GM to run `/campaign set-channel` first."
                 )
 
             # ─────────────────────────────────────────────────────
-            # SERVICE LAYER: Validate membership
+            # SERVICE LAYER: Check membership and auto-join if needed
             # ─────────────────────────────────────────────────────
             membership = await bot.campaign_service.get_membership(
                 campaign_id, player.metadata.id
             )
             if not membership:
-                raise ValueError(
-                    "You must be a member of this campaign to create a character. "
-                    "Ask a GM to add you with `/campaign add_player`."
-                )
+                # Auto-join user to campaign
+                try:
+                    membership = await bot.campaign_service.add_player(
+                        campaign_id=campaign_id,
+                        player_id=player.metadata.id,
+                        role="player",
+                    )
+                    logger.info(
+                        f"Auto-joined player {player.metadata.id} to campaign {campaign_id}"
+                    )
+                except ValueError as e:
+                    # Handle edge case (shouldn't happen, but handle gracefully)
+                    raise ValueError(f"Failed to join campaign: {e}")
 
             # Check for existing character (business rule)
             if membership.character_id:
