@@ -1,10 +1,7 @@
 """Application entry point."""
 
-<<<<<<< HEAD
-=======
 import asyncio
 import json
->>>>>>> 59d1378 (fix: updated uv.lock)
 import logging
 import os
 import sys
